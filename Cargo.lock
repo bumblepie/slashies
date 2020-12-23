@@ -437,6 +437,7 @@ name = "haikubot-rs"
 version = "0.1.0"
 dependencies = [
  "cached",
+ "chrono",
  "lazy_static",
  "regex",
  "serenity",
