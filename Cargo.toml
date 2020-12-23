@@ -13,3 +13,4 @@ regex = "1"
 cached = "0.22"
 lazy_static = "1"
 chrono = "0.4"
+diesel = { version = "1", features = ["postgres", "chrono"] }

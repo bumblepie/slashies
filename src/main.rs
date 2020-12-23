@@ -1,8 +1,15 @@
+#[macro_use]
+extern crate diesel;
+
 mod counting;
+mod database;
+pub mod models;
+pub mod schema;
 
 use chrono::{DateTime, Utc};
 use counting::count_line;
 use lazy_static::lazy_static;
+use models::{Haiku, HaikuLine};
 use serenity::{
     client::{bridge::gateway::GatewayIntents, Context},
     framework::standard::{
@@ -19,17 +26,6 @@ use serenity::{
 use std::env;
 use std::{collections::HashMap, sync::Arc};
 
-#[derive(Debug, Clone)]
-struct Haiku {
-    lines: [HaikuLine; 3],
-    timestamp: DateTime<Utc>,
-}
-
-#[derive(Debug, Clone)]
-struct HaikuLine {
-    author: UserId,
-    content: String,
-}
 struct HaikuTracker;
 impl TypeMapKey for HaikuTracker {
     type Value = Arc<RwLock<HashMap<ChannelId, [Option<HaikuLine>; 3]>>>;
@@ -47,7 +43,7 @@ async fn on_message(ctx: &Context, msg: &Message) {
     }
 }
 
-async fn send_haiku_embed(channel: ChannelId, haiku: &Haiku, ctx: &Context) {
+async fn send_haiku_embed(channel: ChannelId, haiku: &Haiku, haiku_id: i64, ctx: &Context) {
     let (authors, lines): (Vec<UserId>, Vec<String>) = haiku
         .lines
         .to_vec()
@@ -96,7 +92,7 @@ async fn send_haiku_embed(channel: ChannelId, haiku: &Haiku, ctx: &Context) {
                         .icon_url(bot_icon.unwrap_or(
                             "https://cdn.discordapp.com/embed/avatars/0.png".to_owned(),
                         ));
-                    footer.text(format!("Haiku #{}", "<id>"));
+                    footer.text(format!("Haiku #{}", haiku_id));
                     footer
                 });
                 embed.author(|author| {
@@ -133,9 +129,12 @@ async fn on_haiku_line(ctx: &Context, channel: ChannelId, line: HaikuLine) {
                 && count_line(&lines[1].content) == Ok(7)
                 && count_line(&lines[2].content) == Ok(5)
             {
+                let actual_channel = channel.to_channel(&ctx.http).await.unwrap();
                 Some(Haiku {
                     lines,
                     timestamp: Utc::now(),
+                    channel: channel,
+                    server: actual_channel.guild().unwrap().guild_id,
                 })
             } else {
                 None
@@ -144,7 +143,9 @@ async fn on_haiku_line(ctx: &Context, channel: ChannelId, line: HaikuLine) {
         _ => None,
     };
     if let Some(haiku) = haiku {
-        send_haiku_embed(channel, &haiku, ctx).await;
+        let db_connection = database::establish_connection();
+        let id = database::save_haiku(&haiku, &db_connection);
+        send_haiku_embed(channel, &haiku, id, ctx).await;
     }
 }
 
