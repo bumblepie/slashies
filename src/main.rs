@@ -206,7 +206,7 @@ async fn get(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let haiku_and_id = match (args.single(), msg.guild_id) {
         (Ok(id), Some(server_id)) => {
             let db_connection = database::establish_connection();
-            database::get_haiku(server_id, id, &db_connection).map(|haiku| (id, haiku))
+            database::get_haiku(server_id, id, &db_connection)
         }
         _ => None,
     };
@@ -215,8 +215,23 @@ async fn get(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     }
     Ok(())
 }
+
+#[command]
+async fn random(ctx: &Context, msg: &Message) -> CommandResult {
+    let haiku_and_id = if let Some(server_id) = msg.guild_id {
+        let db_connection = database::establish_connection();
+        database::get_random_haiku(server_id, &db_connection)
+    } else {
+        None
+    };
+    if let Some((id, haiku)) = haiku_and_id {
+        send_haiku_embed(msg.channel_id, &haiku, id, ctx).await;
+    }
+    Ok(())
+}
+
 #[group]
-#[commands(count, get)]
+#[commands(count, get, random)]
 struct General;
 
 #[tokio::main]

@@ -464,6 +464,7 @@ dependencies = [
  "chrono",
  "diesel",
  "lazy_static",
+ "rand",
  "regex",
  "serenity",
  "tokio",
