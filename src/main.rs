@@ -1,3 +1,6 @@
+mod counting;
+
+use counting::count_line;
 use serenity::{
     async_trait,
     client::{Context, EventHandler},
@@ -30,6 +33,12 @@ impl EventHandler for Handler {
 }
 
 #[derive(Debug, Clone)]
+struct Haiku {
+    lines: Vec<String>,
+    authors: HashSet<UserId>,
+}
+
+#[derive(Debug, Clone)]
 struct HaikuLine {
     author: UserId,
     content: String,
@@ -37,12 +46,6 @@ struct HaikuLine {
 struct HaikuTracker;
 impl TypeMapKey for HaikuTracker {
     type Value = Arc<RwLock<HashMap<ChannelId, [Option<HaikuLine>; 3]>>>;
-}
-
-#[derive(Debug, Clone)]
-struct Haiku {
-    lines: Vec<String>,
-    authors: HashSet<UserId>,
 }
 
 #[hook]
@@ -70,11 +73,18 @@ async fn on_haiku_line(ctx: &Context, channel: ChannelId, line: HaikuLine) {
     channel_messages[2] = Some(line);
     let haiku = match channel_messages {
         [Some(line_1), Some(line_2), Some(line_3)] => {
-            let (lines, authors) = vec![line_1, line_2, line_3]
+            let (lines, authors): (Vec<String>, HashSet<UserId>) = vec![line_1, line_2, line_3]
                 .into_iter()
                 .map(|line| (line.content.clone(), line.author))
                 .unzip();
-            Some(Haiku { lines, authors })
+            if count_line(&lines[0]) == Ok(5)
+                && count_line(&lines[1]) == Ok(7)
+                && count_line(&lines[2]) == Ok(5)
+            {
+                Some(Haiku { lines, authors })
+            } else {
+                None
+            }
         }
         _ => None,
     };
