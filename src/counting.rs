@@ -42,9 +42,34 @@ fn count_word(word: String) -> Result<usize, Uncountable> {
     }
 }
 
+pub fn is_haiku(lines: &[String]) -> bool {
+    count_line(&lines[0]) == Ok(5)
+        && count_line(&lines[1]) == Ok(7)
+        && count_line(&lines[2]) == Ok(5)
+}
+
+pub fn is_haiku_single(line: &str) -> Result<Option<[String; 3]>, Uncountable> {
+    let mut syllable_count = 0;
+    let mut lines = [Vec::new(), Vec::new(), Vec::new()];
+    for word in line.split_whitespace() {
+        syllable_count += count_word(word.to_owned())?;
+        match syllable_count {
+            x if x <= 5 => lines[0].push(word.to_owned()),
+            x if x <= 12 => lines[1].push(word.to_owned()),
+            _ => lines[2].push(word.to_owned()),
+        }
+    }
+    let lines = [lines[0].join(" "), lines[1].join(" "), lines[2].join(" ")];
+    if is_haiku(&lines) {
+        Ok(Some(lines))
+    } else {
+        Ok(None)
+    }
+}
+
 #[cfg(test)]
 mod test {
-    use super::{count_line, count_word, Uncountable};
+    use super::{count_line, count_word, is_haiku, is_haiku_single, Uncountable};
 
     #[test]
     fn test_count_word() {
@@ -65,5 +90,50 @@ mod test {
         assert_eq!(count_line("Abundant haiku"), Ok(5));
         assert_eq!(count_line("Uses a dictionary"), Ok(7));
         assert_eq!(count_line("Database to come"), Ok(5));
+    }
+
+    #[test]
+    fn test_haiku_single() {
+        assert_eq!(
+            is_haiku_single(
+                "The last winter leaves Clinging to the black branches Explode into birds"
+            ),
+            Ok(Some([
+                "The last winter leaves".to_owned(),
+                "Clinging to the black branches".to_owned(),
+                "Explode into birds".to_owned()
+            ]))
+        );
+        assert_eq!(
+            is_haiku_single(
+                "The last spring leaves Clinging to the black branches Explode into birds"
+            ),
+            Ok(None)
+        );
+        assert_eq!(
+            is_haiku_single(
+                "The last ^%^$&^ leaves Clinging to the black branches Explode into birds"
+            ),
+            Err(Uncountable)
+        );
+    }
+
+    #[test]
+    fn test_haiku() {
+        assert!(is_haiku(&[
+            "The last winter leaves".to_owned(),
+            "Clinging to the black branches".to_owned(),
+            "Explode into birds".to_owned()
+        ]));
+        assert!(!is_haiku(&[
+            "The last spring leaves".to_owned(),
+            "Clinging to the black branches".to_owned(),
+            "Explode into birds".to_owned()
+        ]));
+        assert!(!is_haiku(&[
+            "The last $^%$^ leaves".to_owned(),
+            "Clinging to the black branches".to_owned(),
+            "Explode into birds".to_owned()
+        ]));
     }
 }

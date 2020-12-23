@@ -7,7 +7,7 @@ pub mod models;
 pub mod schema;
 
 use chrono::Utc;
-use counting::count_line;
+use counting::{count_line, is_haiku, is_haiku_single};
 use lazy_static::lazy_static;
 use models::{Haiku, HaikuLine};
 use serenity::{
@@ -129,26 +129,53 @@ async fn on_haiku_line(ctx: &Context, channel: ChannelId, line: HaikuLine) {
     let channel_messages = tracker.entry(channel).or_insert([None, None, None]);
     channel_messages[0] = channel_messages[1].clone();
     channel_messages[1] = channel_messages[2].clone();
-    channel_messages[2] = Some(line);
-    let haiku = match channel_messages {
-        [Some(line_1), Some(line_2), Some(line_3)] => {
-            let lines = [line_1.clone(), line_2.clone(), line_3.clone()];
-            if count_line(&lines[0].content) == Ok(5)
-                && count_line(&lines[1].content) == Ok(7)
-                && count_line(&lines[2].content) == Ok(5)
-            {
-                let actual_channel = channel.to_channel(&ctx.http).await.unwrap();
-                Some(Haiku {
-                    lines,
-                    timestamp: Utc::now(),
-                    channel: channel,
-                    server: actual_channel.guild().unwrap().guild_id,
-                })
-            } else {
-                None
+    channel_messages[2] = Some(line.clone());
+    let haiku = if let Ok(Some(lines)) = is_haiku_single(&line.content) {
+        let actual_channel = channel.to_channel(&ctx.http).await.unwrap();
+        let author = line.author;
+        let lines = [
+            HaikuLine {
+                author,
+                content: lines[0].clone(),
+            },
+            HaikuLine {
+                author,
+                content: lines[1].clone(),
+            },
+            HaikuLine {
+                author,
+                content: lines[2].clone(),
+            },
+        ];
+        Some(Haiku {
+            lines,
+            timestamp: Utc::now(),
+            channel: channel,
+            server: actual_channel.guild().unwrap().guild_id,
+        })
+    } else {
+        match channel_messages {
+            [Some(line_1), Some(line_2), Some(line_3)] => {
+                let lines = [line_1.clone(), line_2.clone(), line_3.clone()];
+                let line_contents = [
+                    line_1.content.clone(),
+                    line_2.content.clone(),
+                    line_3.content.clone(),
+                ];
+                if is_haiku(&line_contents) {
+                    let actual_channel = channel.to_channel(&ctx.http).await.unwrap();
+                    Some(Haiku {
+                        lines,
+                        timestamp: Utc::now(),
+                        channel: channel,
+                        server: actual_channel.guild().unwrap().guild_id,
+                    })
+                } else {
+                    None
+                }
             }
+            _ => None,
         }
-        _ => None,
     };
     if let Some(haiku) = haiku {
         let db_connection = database::establish_connection();
