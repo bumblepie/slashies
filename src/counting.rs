@@ -18,7 +18,7 @@ pub fn count_line(line: &str) -> Result<usize, Uncountable> {
 #[cached(size = 1000)]
 fn count_word(word: String) -> Result<usize, Uncountable> {
     lazy_static! {
-        static ref WORD_REGEX: Regex = Regex::new(r"^\w+$").unwrap();
+        static ref WORD_REGEX: Regex = Regex::new(r"^[\w']+$").unwrap();
     }
     if !WORD_REGEX.is_match(&word) {
         Err(Uncountable)
@@ -53,6 +53,7 @@ mod test {
         assert_eq!(count_word("abUNdaNT".to_owned()), Ok(3));
         assert_eq!(count_word("a".to_owned()), Ok(1));
         assert_eq!(count_word("A".to_owned()), Ok(1));
+        assert_eq!(count_word("Don't".to_owned()), Ok(1));
         assert_eq!(count_word("X Y Z".to_owned()), Err(Uncountable));
         assert_eq!(count_word("XYZ".to_owned()), Err(Uncountable));
         assert_eq!(count_word("#$&^%&".to_owned()), Err(Uncountable));
