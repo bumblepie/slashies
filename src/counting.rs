@@ -28,7 +28,7 @@ fn count_word(word: String) -> Result<usize, Uncountable> {
         let line: Option<String> = reader
             .lines()
             .filter_map(Result::ok)
-            .filter(|line| line.starts_with(&word.to_uppercase()))
+            .filter(|line| line.starts_with(&format!("{} ", word.to_uppercase())))
             .next();
         if let Some(line) = line {
             lazy_static! {
