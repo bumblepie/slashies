@@ -4,7 +4,10 @@ use counting::count_line;
 use serenity::{
     async_trait,
     client::{Context, EventHandler},
-    framework::standard::macros::hook,
+    framework::standard::{
+        macros::{command, group, hook},
+        Args, CommandResult,
+    },
     framework::StandardFramework,
     model::channel::Message,
     model::prelude::*,
@@ -96,6 +99,26 @@ async fn on_haiku_line(ctx: &Context, channel: ChannelId, line: HaikuLine) {
     }
 }
 
+#[command]
+async fn count(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    match count_line(&args.message()) {
+        Ok(syllables) => {
+            msg.reply(
+                &ctx.http,
+                format!("Message '{}' has {} syllables", args.message(), syllables),
+            )
+            .await?;
+        }
+        Err(_) => {
+            msg.reply(&ctx.http, "Message is not countable").await?;
+        }
+    }
+    Ok(())
+}
+#[group]
+#[commands(count)]
+struct General;
+
 #[tokio::main]
 async fn main() {
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
@@ -106,7 +129,8 @@ async fn main() {
 
     let framework = StandardFramework::new()
         .configure(|c| c.on_mention(Some(UserId(user_id))).prefix(""))
-        .normal_message(on_message);
+        .normal_message(on_message)
+        .group(&GENERAL_GROUP);
     let mut client = Client::builder(&token)
         .event_handler(Handler)
         .framework(framework)
