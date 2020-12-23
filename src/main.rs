@@ -57,17 +57,25 @@ async fn send_haiku_embed(channel: ChannelId, haiku: &Haiku, haiku_id: i64, ctx:
         .members(&ctx.cache)
         .await
         .unwrap();
-    let primary_author = members.iter().find(|member| member.user.id == authors[2]);
+    let primary_author = members.iter().find(|member| member.user.id == authors[0]);
     lazy_static! {
         static ref BOT_USER_ID: String = env::var("DISCORD_USER_ID")
             .expect("Expected a user id in the environment")
             .parse()
             .expect("Invalid user id");
     }
-    let primary_author_nickname = match primary_author {
-        Some(author) => author.display_name().to_string(),
-        None => "Unknown User".to_owned(),
-    };
+    let mut unique_authors = authors.clone();
+    unique_authors.dedup();
+    let authors_string = unique_authors
+        .into_iter()
+        .map(
+            |author| match members.iter().find(|member| member.user.id == author) {
+                Some(author) => author.display_name().to_string(),
+                None => "Unknown User".to_owned(),
+            },
+        )
+        .collect::<Vec<String>>()
+        .join(", ");
     let primary_author_icon = match primary_author {
         Some(author) => author.user.avatar_url(),
         None => None,
@@ -96,7 +104,7 @@ async fn send_haiku_embed(channel: ChannelId, haiku: &Haiku, haiku_id: i64, ctx:
                     footer
                 });
                 embed.author(|author| {
-                    author.name(primary_author_nickname);
+                    author.name(authors_string);
                     author
                         .icon_url(primary_author_icon.unwrap_or(
                             "https://cdn.discordapp.com/embed/avatars/0.png".to_owned(),
