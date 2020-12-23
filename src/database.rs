@@ -2,6 +2,8 @@ use crate::models::*;
 use crate::Haiku;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
+use serenity::model::id::GuildId;
+use std::convert::TryFrom;
 use std::env;
 
 pub fn establish_connection() -> PgConnection {
@@ -19,6 +21,19 @@ pub fn save_haiku(haiku: &Haiku, database_connection: &PgConnection) -> i64 {
     haiku.id
 }
 
-pub fn get_haiku(id: u32, database_connection: &PgConnection) -> Haiku {
-    todo!()
+pub fn get_haiku(
+    server_id: GuildId,
+    haiku_id: i64,
+    database_connection: &PgConnection,
+) -> Option<Haiku> {
+    use crate::schema::haikus::dsl::*;
+    let results = haikus
+        .filter(server.eq(i64::try_from(*server_id.as_u64()).unwrap()))
+        .filter(id.eq(haiku_id))
+        .load::<HaikuDTO>(database_connection)
+        .expect("Error fetching haiku");
+    results.into_iter().next().map(|dto| {
+        let (_id, haiku) = dto.into();
+        haiku
+    })
 }

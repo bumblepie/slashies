@@ -31,6 +31,33 @@ pub struct HaikuDTO {
     pub message_2: String,
 }
 
+impl Into<(i64, Haiku)> for HaikuDTO {
+    fn into(self) -> (i64, Haiku) {
+        (
+            self.id,
+            Haiku {
+                lines: [
+                    HaikuLine {
+                        content: self.message_0,
+                        author: UserId::from(u64::try_from(self.author_0).unwrap()),
+                    },
+                    HaikuLine {
+                        content: self.message_1,
+                        author: UserId::from(u64::try_from(self.author_1).unwrap()),
+                    },
+                    HaikuLine {
+                        content: self.message_2,
+                        author: UserId::from(u64::try_from(self.author_2).unwrap()),
+                    },
+                ],
+                timestamp: DateTime::from_utc(self.timestamp, Utc),
+                channel: ChannelId::from(u64::try_from(self.channel).unwrap()),
+                server: GuildId::from(u64::try_from(self.server).unwrap()),
+            },
+        )
+    }
+}
+
 #[derive(Insertable)]
 #[table_name = "haikus"]
 pub struct NewHaikuDTO {

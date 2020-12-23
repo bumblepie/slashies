@@ -6,7 +6,7 @@ mod database;
 pub mod models;
 pub mod schema;
 
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use counting::count_line;
 use lazy_static::lazy_static;
 use models::{Haiku, HaikuLine};
@@ -165,8 +165,23 @@ async fn count(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     }
     Ok(())
 }
+
+#[command]
+async fn get(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let haiku_and_id = match (args.single(), msg.guild_id) {
+        (Ok(id), Some(server_id)) => {
+            let db_connection = database::establish_connection();
+            database::get_haiku(server_id, id, &db_connection).map(|haiku| (id, haiku))
+        }
+        _ => None,
+    };
+    if let Some((id, haiku)) = haiku_and_id {
+        send_haiku_embed(msg.channel_id, &haiku, id, ctx).await;
+    }
+    Ok(())
+}
 #[group]
-#[commands(count)]
+#[commands(count, get)]
 struct General;
 
 #[tokio::main]
