@@ -12,9 +12,11 @@ use lazy_static::lazy_static;
 use models::{Haiku, HaikuLine};
 use serenity::{
     client::{bridge::gateway::GatewayIntents, Context},
+    framework::standard::help_commands,
+    framework::standard::macros::help,
     framework::standard::{
         macros::{command, group, hook},
-        Args, CommandResult,
+        Args, CommandGroup, CommandResult, HelpOptions,
     },
     framework::StandardFramework,
     model::channel::Message,
@@ -24,7 +26,7 @@ use serenity::{
     utils::Color,
     Client,
 };
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, collections::HashSet, sync::Arc};
 use std::{env, time::Duration};
 
 struct HaikuTracker;
@@ -270,6 +272,8 @@ async fn on_haiku_line(ctx: &Context, channel: ChannelId, line: HaikuLine) {
     }
 }
 
+/// Count the number of syllables in a given phrase
+/// This bot uses the CMU dictionary http://www.speech.cs.cmu.edu/cgi-bin/cmudict so some words might be uncountable
 #[command]
 async fn count(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     match count_line(&args.message()) {
@@ -287,6 +291,7 @@ async fn count(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     Ok(())
 }
 
+/// Fetch a specific haiku from this server by its id
 #[command]
 async fn get(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let haiku_and_id = match (args.single(), msg.guild_id) {
@@ -304,6 +309,7 @@ async fn get(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     Ok(())
 }
 
+/// Fetch a random haiku from this server
 #[command]
 async fn random(ctx: &Context, msg: &Message) -> CommandResult {
     let haiku_and_id = if let Some(server_id) = msg.guild_id {
@@ -320,6 +326,8 @@ async fn random(ctx: &Context, msg: &Message) -> CommandResult {
     Ok(())
 }
 
+/// Search for a haiku, using a set of keywords separated by spaces
+/// Returns up to five matching haiku from this server
 #[command]
 async fn search(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let keywords = args.iter().collect::<Result<Vec<String>, _>>()?;
@@ -406,6 +414,7 @@ async fn search(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     Ok(())
 }
 
+/// Show how long since the bot was last restarted
 #[command]
 async fn uptime(ctx: &Context, msg: &Message) -> CommandResult {
     let data = ctx.data.read().await;
@@ -429,6 +438,19 @@ async fn uptime(ctx: &Context, msg: &Message) -> CommandResult {
     Ok(())
 }
 
+#[help]
+async fn my_help(
+    context: &Context,
+    msg: &Message,
+    args: Args,
+    help_options: &'static HelpOptions,
+    groups: &[&'static CommandGroup],
+    owners: HashSet<UserId>,
+) -> CommandResult {
+    let _ = help_commands::with_embeds(context, msg, args, help_options, groups, owners).await;
+    Ok(())
+}
+
 #[group]
 #[commands(count, get, random, search, uptime)]
 struct General;
@@ -444,7 +466,8 @@ async fn main() {
     let framework = StandardFramework::new()
         .configure(|c| c.on_mention(Some(UserId(user_id))).prefix(""))
         .normal_message(on_message)
-        .group(&GENERAL_GROUP);
+        .group(&GENERAL_GROUP)
+        .help(&MY_HELP);
     let mut client = Client::builder(&token)
         .framework(framework)
         .add_intent(GatewayIntents::GUILDS)
