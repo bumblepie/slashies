@@ -21,10 +21,11 @@ use serenity::{
     model::prelude::*,
     prelude::RwLock,
     prelude::TypeMapKey,
+    utils::Color,
     Client,
 };
-use std::env;
 use std::{collections::HashMap, sync::Arc};
+use std::{env, time::Duration};
 
 struct HaikuTracker;
 impl TypeMapKey for HaikuTracker {
@@ -43,14 +44,24 @@ async fn on_message(ctx: &Context, msg: &Message) {
     }
 }
 
-async fn send_haiku_embed(channel: ChannelId, haiku: &Haiku, haiku_id: i64, ctx: &Context) {
+struct EmbedData {
+    haiku_lines: Vec<String>,
+    haiku_id: i64,
+    haiku_timestamp: DateTime<Utc>,
+    bot_icon_url: Option<String>,
+    unique_authors: Vec<String>,
+    primary_author_color: Option<Color>,
+    primary_author_icon: Option<String>,
+}
+
+async fn to_embed(id: i64, haiku: &Haiku, ctx: &Context) -> EmbedData {
     let (authors, lines): (Vec<UserId>, Vec<String>) = haiku
         .lines
         .to_vec()
         .into_iter()
         .map(|line| (line.author, line.content.clone()))
         .unzip();
-    let actual_channel = channel.to_channel(&ctx.http).await.unwrap();
+    let actual_channel = haiku.channel.to_channel(&ctx.http).await.unwrap();
     let members = actual_channel
         .guild()
         .unwrap()
@@ -64,9 +75,17 @@ async fn send_haiku_embed(channel: ChannelId, haiku: &Haiku, haiku_id: i64, ctx:
             .parse()
             .expect("Invalid user id");
     }
+    let primary_author_icon = match primary_author {
+        Some(author) => author.user.avatar_url(),
+        None => None,
+    };
+    let primary_author_color = match primary_author {
+        Some(author) => author.colour(&ctx.cache).await,
+        None => None,
+    };
     let mut unique_authors = authors.clone();
     unique_authors.dedup();
-    let authors_string = unique_authors
+    let unique_authors = unique_authors
         .into_iter()
         .map(
             |author| match members.iter().find(|member| member.user.id == author) {
@@ -74,49 +93,109 @@ async fn send_haiku_embed(channel: ChannelId, haiku: &Haiku, haiku_id: i64, ctx:
                 None => "Unknown User".to_owned(),
             },
         )
-        .collect::<Vec<String>>()
-        .join(", ");
-    let primary_author_icon = match primary_author {
-        Some(author) => author.user.avatar_url(),
-        None => None,
-    };
-    let primary_author_colour = match primary_author {
-        Some(author) => author.colour(&ctx.cache).await,
-        None => None,
-    };
-    let bot_member = ctx.cache.current_user().await;
-    let bot_icon = bot_member.avatar_url();
+        .collect();
 
-    channel
-        .send_message(&ctx.http, |msg| {
+    let bot_member = ctx.cache.current_user().await;
+    let bot_icon_url = bot_member.avatar_url();
+    EmbedData {
+        haiku_lines: lines,
+        haiku_id: id,
+        haiku_timestamp: haiku.timestamp,
+        bot_icon_url,
+        unique_authors,
+        primary_author_color,
+        primary_author_icon,
+    }
+}
+
+async fn edit_haiku_embed(
+    message: &mut Message,
+    haiku: &Haiku,
+    haiku_id: i64,
+    content: Option<String>,
+    ctx: &Context,
+) -> serenity::Result<()> {
+    let embed_data = to_embed(haiku_id, haiku, ctx).await;
+    message
+        .edit(&ctx.http, |msg| {
+            let author_string = embed_data.unique_authors.join(", ");
+            let author_icon_url = embed_data
+                .primary_author_icon
+                .clone()
+                .unwrap_or("https://cdn.discordapp.com/embed/avatars/0.png".to_owned());
             msg.embed(|embed| {
                 embed.title("A beautiful haiku has been created!");
-                embed.description(lines.join("\n"));
+                embed.description(embed_data.haiku_lines.join("\n"));
                 embed.url("https://github.com/bumblepie/haikubot");
-                embed.color(primary_author_colour.unwrap_or_default());
-                embed.timestamp(&haiku.timestamp);
+                embed.color(embed_data.primary_author_color.unwrap_or_default());
+                embed.timestamp(&embed_data.haiku_timestamp);
                 embed.footer(|footer| {
-                    footer
-                        .icon_url(bot_icon.unwrap_or(
-                            "https://cdn.discordapp.com/embed/avatars/0.png".to_owned(),
-                        ));
-                    footer.text(format!("Haiku #{}", haiku_id));
+                    footer.icon_url(
+                        embed_data
+                            .bot_icon_url
+                            .unwrap_or("https://cdn.discordapp.com/embed/avatars/0.png".to_owned()),
+                    );
+                    footer.text(format!("Haiku #{}", embed_data.haiku_id));
                     footer
                 });
                 embed.author(|author| {
-                    author.name(authors_string);
-                    author
-                        .icon_url(primary_author_icon.unwrap_or(
-                            "https://cdn.discordapp.com/embed/avatars/0.png".to_owned(),
-                        ));
+                    author.name(author_string);
+                    author.icon_url(author_icon_url);
                     author
                 });
                 embed
             });
+            if let Some(content) = content {
+                msg.content(content);
+            }
             msg
         })
         .await
-        .expect("Failed to send haiku msg");
+}
+
+async fn send_haiku_embed(
+    channel: ChannelId,
+    haiku: &Haiku,
+    haiku_id: i64,
+    content: Option<String>,
+    ctx: &Context,
+) -> serenity::Result<Message> {
+    let embed_data = to_embed(haiku_id, haiku, ctx).await;
+    channel
+        .send_message(&ctx.http, |msg| {
+            let author_string = embed_data.unique_authors.join(", ");
+            let author_icon_url = embed_data
+                .primary_author_icon
+                .clone()
+                .unwrap_or("https://cdn.discordapp.com/embed/avatars/0.png".to_owned());
+            msg.embed(|embed| {
+                embed.title("A beautiful haiku has been created!");
+                embed.description(embed_data.haiku_lines.join("\n"));
+                embed.url("https://github.com/bumblepie/haikubot");
+                embed.color(embed_data.primary_author_color.unwrap_or_default());
+                embed.timestamp(&embed_data.haiku_timestamp);
+                embed.footer(|footer| {
+                    footer.icon_url(
+                        embed_data
+                            .bot_icon_url
+                            .unwrap_or("https://cdn.discordapp.com/embed/avatars/0.png".to_owned()),
+                    );
+                    footer.text(format!("Haiku #{}", embed_data.haiku_id));
+                    footer
+                });
+                embed.author(|author| {
+                    author.name(author_string);
+                    author.icon_url(author_icon_url);
+                    author
+                });
+                embed
+            });
+            if let Some(content) = content {
+                msg.content(content);
+            }
+            msg
+        })
+        .await
 }
 
 async fn on_haiku_line(ctx: &Context, channel: ChannelId, line: HaikuLine) {
@@ -180,7 +259,9 @@ async fn on_haiku_line(ctx: &Context, channel: ChannelId, line: HaikuLine) {
     if let Some(haiku) = haiku {
         let db_connection = database::establish_connection();
         let id = database::save_haiku(&haiku, &db_connection);
-        send_haiku_embed(channel, &haiku, id, ctx).await;
+        send_haiku_embed(channel, &haiku, id, None, ctx)
+            .await
+            .expect("Failed to send haiku msg");
     }
 }
 
@@ -211,7 +292,9 @@ async fn get(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
         _ => None,
     };
     if let Some((id, haiku)) = haiku_and_id {
-        send_haiku_embed(msg.channel_id, &haiku, id, ctx).await;
+        send_haiku_embed(msg.channel_id, &haiku, id, None, ctx)
+            .await
+            .expect("Failed to send haiku msg");
     }
     Ok(())
 }
@@ -225,13 +308,100 @@ async fn random(ctx: &Context, msg: &Message) -> CommandResult {
         None
     };
     if let Some((id, haiku)) = haiku_and_id {
-        send_haiku_embed(msg.channel_id, &haiku, id, ctx).await;
+        send_haiku_embed(msg.channel_id, &haiku, id, None, ctx)
+            .await
+            .expect("Failed to send haiku msg");
     }
     Ok(())
 }
 
+#[command]
+async fn search(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let keywords = args.iter().collect::<Result<Vec<String>, _>>()?;
+
+    if let Some(server_id) = msg.guild_id {
+        let db_connection = database::establish_connection();
+        let search_results = database::search_haikus(server_id, keywords, &db_connection);
+        if !search_results.is_empty() {
+            let mut index = 0;
+            let (id, haiku) = search_results.get(index).unwrap();
+            let mut search_result_msg = send_haiku_embed(
+                msg.channel_id,
+                haiku,
+                *id,
+                Some(format!(
+                    "Search result {}/{}",
+                    index + 1,
+                    search_results.len()
+                )),
+                ctx,
+            )
+            .await
+            .expect("Failed to send search results");
+            search_result_msg
+                .react(&ctx.http, ReactionType::Unicode("⬅️".to_owned()))
+                .await
+                .expect("Failed to add reaction to search results msg");
+            search_result_msg
+                .react(&ctx.http, ReactionType::Unicode("➡️".to_owned()))
+                .await
+                .expect("Failed to add reaction to search results msg");
+            loop {
+                if let Some(reaction) = search_result_msg
+                    .await_reaction(ctx)
+                    .timeout(Duration::from_secs(300))
+                    .await
+                {
+                    if let Some((new_index, (id, haiku))) =
+                        match reaction.as_inner_ref().emoji.as_data().as_str() {
+                            "➡️" => {
+                                let new_index = index + 1;
+                                search_results.get(new_index).map(|x| (new_index, x))
+                            }
+                            "⬅️" => {
+                                if let Some(new_index) = index.checked_sub(1) {
+                                    search_results.get(new_index).map(|x| (new_index, x))
+                                } else {
+                                    None
+                                }
+                            }
+                            _ => None,
+                        }
+                    {
+                        edit_haiku_embed(
+                            &mut search_result_msg,
+                            haiku,
+                            *id,
+                            Some(format!(
+                                "Search result {}/{}",
+                                new_index + 1,
+                                search_results.len()
+                            )),
+                            ctx,
+                        )
+                        .await
+                        .expect("Failed to edit search results message");
+                        index = new_index;
+                        reaction
+                            .as_inner_ref()
+                            .delete(&ctx.http)
+                            .await
+                            .expect("Unable to delete reaction");
+                    }
+                } else {
+                    break;
+                }
+            }
+        } else {
+            msg.reply(&ctx.http, "No matching haiku found")
+                .await
+                .expect("Failed to send search results msg");
+        }
+    }
+    Ok(())
+}
 #[group]
-#[commands(count, get, random)]
+#[commands(count, get, random, search)]
 struct General;
 
 #[tokio::main]
@@ -252,6 +422,7 @@ async fn main() {
         .add_intent(GatewayIntents::GUILD_MEMBERS)
         .add_intent(GatewayIntents::GUILD_PRESENCES)
         .add_intent(GatewayIntents::GUILD_MESSAGES)
+        .add_intent(GatewayIntents::GUILD_MESSAGE_REACTIONS)
         .await
         .expect("Err creating client");
 
