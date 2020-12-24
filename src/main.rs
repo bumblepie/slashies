@@ -6,7 +6,7 @@ mod database;
 pub mod models;
 pub mod schema;
 
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use counting::{count_line, is_haiku, is_haiku_single};
 use lazy_static::lazy_static;
 use models::{Haiku, HaikuLine};
@@ -30,6 +30,11 @@ use std::{env, time::Duration};
 struct HaikuTracker;
 impl TypeMapKey for HaikuTracker {
     type Value = Arc<RwLock<HashMap<ChannelId, [Option<HaikuLine>; 3]>>>;
+}
+
+struct UptimeStart;
+impl TypeMapKey for UptimeStart {
+    type Value = DateTime<Utc>;
 }
 
 #[hook]
@@ -400,8 +405,32 @@ async fn search(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     }
     Ok(())
 }
+
+#[command]
+async fn uptime(ctx: &Context, msg: &Message) -> CommandResult {
+    let data = ctx.data.read().await;
+    let uptime_start_lock = data
+        .get::<UptimeStart>()
+        .expect("Expected HaikuTracker in TypeMap")
+        .clone();
+    let uptime = Utc::now().signed_duration_since(uptime_start_lock);
+    let days = uptime.num_days();
+    let uptime = uptime - chrono::Duration::days(days);
+    let hrs = uptime.num_hours();
+    let uptime = uptime - chrono::Duration::hours(hrs);
+    let mins = uptime.num_minutes();
+
+    msg.reply(
+        &ctx.http,
+        format!("Uptime: {} days, {} hours, {} minutes", days, hrs, mins),
+    )
+    .await
+    .expect("Could not send uptime message");
+    Ok(())
+}
+
 #[group]
-#[commands(count, get, random, search)]
+#[commands(count, get, random, search, uptime)]
 struct General;
 
 #[tokio::main]
@@ -429,6 +458,7 @@ async fn main() {
     {
         let mut data = client.data.write().await;
         data.insert::<HaikuTracker>(Arc::new(RwLock::new(HashMap::new())));
+        data.insert::<UptimeStart>(Utc::now());
     }
 
     if let Err(why) = client.start().await {
