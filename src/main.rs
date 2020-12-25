@@ -90,8 +90,12 @@ async fn to_embed(id: i64, haiku: &Haiku, ctx: &Context) -> EmbedData {
         Some(author) => author.colour(&ctx.cache).await,
         None => None,
     };
+
+    // Deduplicate retaining order
     let mut unique_authors = authors.clone();
-    unique_authors.dedup();
+    let mut unique_authors_set = HashSet::new();
+    unique_authors.retain(|x| unique_authors_set.insert(x.clone()));
+
     let unique_authors = unique_authors
         .into_iter()
         .map(
