@@ -138,7 +138,7 @@ async fn edit_haiku_embed(
             msg.embed(|embed| {
                 embed.title("A beautiful haiku has been created!");
                 embed.description(embed_data.haiku_lines.join("\n"));
-                embed.url("https://github.com/bumblepie/haikubot");
+                embed.url("https://github.com/bumblepie/haikubot-rs");
                 embed.color(embed_data.primary_author_color.unwrap_or_default());
                 embed.timestamp(&embed_data.haiku_timestamp);
                 embed.footer(|footer| {
@@ -183,7 +183,7 @@ async fn send_haiku_embed(
             msg.embed(|embed| {
                 embed.title("A beautiful haiku has been created!");
                 embed.description(embed_data.haiku_lines.join("\n"));
-                embed.url("https://github.com/bumblepie/haikubot");
+                embed.url("https://github.com/bumblepie/haikubot-rs");
                 embed.color(embed_data.primary_author_color.unwrap_or_default());
                 embed.timestamp(&embed_data.haiku_timestamp);
                 embed.footer(|footer| {
