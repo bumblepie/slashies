@@ -68,9 +68,10 @@ async fn to_embed(id: i64, haiku: &Haiku, ctx: &Context) -> EmbedData {
         .into_iter()
         .map(|line| (line.author, line.content.clone()))
         .unzip();
-    let actual_channel = haiku.channel.to_channel(&ctx.http).await.unwrap();
-    let members = actual_channel
-        .guild()
+    let members = ctx
+        .cache
+        .guild_channel(haiku.channel)
+        .await
         .unwrap()
         .members(&ctx.cache)
         .await
@@ -221,7 +222,7 @@ async fn on_haiku_line(ctx: &Context, channel: ChannelId, line: HaikuLine) {
     channel_messages[1] = channel_messages[2].clone();
     channel_messages[2] = Some(line.clone());
     let haiku = if let Ok(Some(lines)) = is_haiku_single(&line.content) {
-        let actual_channel = channel.to_channel(&ctx.http).await.unwrap();
+        let guild_id = ctx.cache.guild_channel(channel).await.unwrap().guild_id;
         let author = line.author;
         let lines = [
             HaikuLine {
@@ -241,7 +242,7 @@ async fn on_haiku_line(ctx: &Context, channel: ChannelId, line: HaikuLine) {
             lines,
             timestamp: Utc::now(),
             channel: channel,
-            server: actual_channel.guild().unwrap().guild_id,
+            server: guild_id,
         })
     } else {
         match channel_messages {
@@ -253,12 +254,12 @@ async fn on_haiku_line(ctx: &Context, channel: ChannelId, line: HaikuLine) {
                     line_3.content.clone(),
                 ];
                 if is_haiku(&line_contents) {
-                    let actual_channel = channel.to_channel(&ctx.http).await.unwrap();
+                    let guild_id = ctx.cache.guild_channel(channel).await.unwrap().guild_id;
                     Some(Haiku {
                         lines,
                         timestamp: Utc::now(),
                         channel: channel,
-                        server: actual_channel.guild().unwrap().guild_id,
+                        server: guild_id,
                     })
                 } else {
                     None
