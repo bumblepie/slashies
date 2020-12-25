@@ -51,7 +51,14 @@ pub fn get_random_haiku(
         .expect("Error fetching haiku");
     for _ in 0..10 {
         let haiku_id = rand::thread_rng().gen_range(0, count);
-        if let Some(haiku) = get_haiku(server_id, haiku_id, database_connection) {
+        let results = haikus
+            .filter(server.eq(i64::try_from(*server_id.as_u64()).unwrap()))
+            .offset(haiku_id)
+            .limit(1)
+            .load::<HaikuDTO>(database_connection)
+            .expect("Error fetching haiku");
+        let haiku = results.into_iter().next().map(|dto| dto.into());
+        if let Some(haiku) = haiku {
             return Some(haiku);
         }
     }
