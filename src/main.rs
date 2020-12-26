@@ -11,6 +11,7 @@ use counting::{count_line, is_haiku, is_haiku_single};
 use lazy_static::lazy_static;
 use models::{Haiku, HaikuLine};
 use serenity::{
+    builder::CreateEmbed,
     client::{bridge::gateway::GatewayIntents, Context},
     framework::standard::help_commands,
     framework::standard::macros::help,
@@ -61,7 +62,7 @@ struct EmbedData {
     primary_author_icon: Option<String>,
 }
 
-async fn to_embed(id: i64, haiku: &Haiku, ctx: &Context) -> EmbedData {
+async fn to_embed_data(id: i64, haiku: &Haiku, ctx: &Context) -> EmbedData {
     let (authors, lines): (Vec<UserId>, Vec<String>) = haiku
         .lines
         .to_vec()
@@ -120,94 +121,32 @@ async fn to_embed(id: i64, haiku: &Haiku, ctx: &Context) -> EmbedData {
     }
 }
 
-async fn edit_haiku_embed(
-    message: &mut Message,
-    haiku: &Haiku,
-    haiku_id: i64,
-    content: Option<String>,
-    ctx: &Context,
-) -> serenity::Result<()> {
-    let embed_data = to_embed(haiku_id, haiku, ctx).await;
-    message
-        .edit(&ctx.http, |msg| {
-            let author_string = embed_data.unique_authors.join(", ");
-            let author_icon_url = embed_data
-                .primary_author_icon
-                .clone()
-                .unwrap_or("https://cdn.discordapp.com/embed/avatars/0.png".to_owned());
-            msg.embed(|embed| {
-                embed.title("A beautiful haiku has been created!");
-                embed.description(embed_data.haiku_lines.join("\n"));
-                embed.url("https://github.com/bumblepie/haikubot-rs");
-                embed.color(embed_data.primary_author_color.unwrap_or_default());
-                embed.timestamp(&embed_data.haiku_timestamp);
-                embed.footer(|footer| {
-                    footer.icon_url(
-                        embed_data
-                            .bot_icon_url
-                            .unwrap_or("https://cdn.discordapp.com/embed/avatars/0.png".to_owned()),
-                    );
-                    footer.text(format!("Haiku #{}", embed_data.haiku_id));
-                    footer
-                });
-                embed.author(|author| {
-                    author.name(author_string);
-                    author.icon_url(author_icon_url);
-                    author
-                });
-                embed
-            });
-            if let Some(content) = content {
-                msg.content(content);
-            }
-            msg
-        })
-        .await
-}
-
-async fn send_haiku_embed(
-    channel: ChannelId,
-    haiku: &Haiku,
-    haiku_id: i64,
-    content: Option<String>,
-    ctx: &Context,
-) -> serenity::Result<Message> {
-    let embed_data = to_embed(haiku_id, haiku, ctx).await;
-    channel
-        .send_message(&ctx.http, |msg| {
-            let author_string = embed_data.unique_authors.join(", ");
-            let author_icon_url = embed_data
-                .primary_author_icon
-                .clone()
-                .unwrap_or("https://cdn.discordapp.com/embed/avatars/0.png".to_owned());
-            msg.embed(|embed| {
-                embed.title("A beautiful haiku has been created!");
-                embed.description(embed_data.haiku_lines.join("\n"));
-                embed.url("https://github.com/bumblepie/haikubot-rs");
-                embed.color(embed_data.primary_author_color.unwrap_or_default());
-                embed.timestamp(&embed_data.haiku_timestamp);
-                embed.footer(|footer| {
-                    footer.icon_url(
-                        embed_data
-                            .bot_icon_url
-                            .unwrap_or("https://cdn.discordapp.com/embed/avatars/0.png".to_owned()),
-                    );
-                    footer.text(format!("Haiku #{}", embed_data.haiku_id));
-                    footer
-                });
-                embed.author(|author| {
-                    author.name(author_string);
-                    author.icon_url(author_icon_url);
-                    author
-                });
-                embed
-            });
-            if let Some(content) = content {
-                msg.content(content);
-            }
-            msg
-        })
-        .await
+fn format_haiku_embed(embed_data: EmbedData, embed: &mut CreateEmbed) -> &mut CreateEmbed {
+    let author_string = embed_data.unique_authors.join(", ");
+    let author_icon_url = embed_data
+        .primary_author_icon
+        .clone()
+        .unwrap_or("https://cdn.discordapp.com/embed/avatars/0.png".to_owned());
+    embed.title("A beautiful haiku has been created!");
+    embed.description(embed_data.haiku_lines.join("\n"));
+    embed.url("https://github.com/bumblepie/haikubot-rs");
+    embed.color(embed_data.primary_author_color.unwrap_or_default());
+    embed.timestamp(&embed_data.haiku_timestamp);
+    embed.footer(|footer| {
+        footer.icon_url(
+            embed_data
+                .bot_icon_url
+                .unwrap_or("https://cdn.discordapp.com/embed/avatars/0.png".to_owned()),
+        );
+        footer.text(format!("Haiku #{}", embed_data.haiku_id));
+        footer
+    });
+    embed.author(|author| {
+        author.name(author_string);
+        author.icon_url(author_icon_url);
+        author
+    });
+    embed
 }
 
 async fn on_haiku_line(ctx: &Context, channel: ChannelId, line: HaikuLine) {
@@ -271,7 +210,12 @@ async fn on_haiku_line(ctx: &Context, channel: ChannelId, line: HaikuLine) {
     if let Some(haiku) = haiku {
         let db_connection = database::establish_connection();
         let id = database::save_haiku(&haiku, &db_connection);
-        send_haiku_embed(channel, &haiku, id, None, ctx)
+        let embed_data = to_embed_data(id, &haiku, ctx).await;
+        channel
+            .send_message(&ctx.http, |msg| {
+                msg.embed(|embed| format_haiku_embed(embed_data, embed));
+                msg
+            })
             .await
             .expect("Failed to send haiku msg");
     }
@@ -307,7 +251,12 @@ async fn get(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
         _ => None,
     };
     if let Some((id, haiku)) = haiku_and_id {
-        send_haiku_embed(msg.channel_id, &haiku, id, None, ctx)
+        let embed_data = to_embed_data(id, &haiku, ctx).await;
+        msg.channel_id
+            .send_message(&ctx.http, |msg| {
+                msg.embed(|embed| format_haiku_embed(embed_data, embed));
+                msg
+            })
             .await
             .expect("Failed to send haiku msg");
     }
@@ -324,7 +273,12 @@ async fn random(ctx: &Context, msg: &Message) -> CommandResult {
         None
     };
     if let Some((id, haiku)) = haiku_and_id {
-        send_haiku_embed(msg.channel_id, &haiku, id, None, ctx)
+        let embed_data = to_embed_data(id, &haiku, ctx).await;
+        msg.channel_id
+            .send_message(&ctx.http, |msg| {
+                msg.embed(|embed| format_haiku_embed(embed_data, embed));
+                msg
+            })
             .await
             .expect("Failed to send haiku msg");
     }
@@ -343,19 +297,20 @@ async fn search(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
         if !search_results.is_empty() {
             let mut index = 0;
             let (id, haiku) = search_results.get(index).unwrap();
-            let mut search_result_msg = send_haiku_embed(
-                msg.channel_id,
-                haiku,
-                *id,
-                Some(format!(
-                    "Search result {}/{}",
-                    index + 1,
-                    search_results.len()
-                )),
-                ctx,
-            )
-            .await
-            .expect("Failed to send search results");
+            let embed_data = to_embed_data(*id, &haiku, ctx).await;
+            let mut search_result_msg = msg
+                .channel_id
+                .send_message(&ctx.http, |msg| {
+                    msg.embed(|embed| format_haiku_embed(embed_data, embed));
+                    msg.content(format!(
+                        "Search result {}/{}",
+                        index + 1,
+                        search_results.len()
+                    ));
+                    msg
+                })
+                .await
+                .expect("Failed to send search results");
             search_result_msg
                 .react(&ctx.http, ReactionType::Unicode("⬅️".to_owned()))
                 .await
@@ -386,19 +341,19 @@ async fn search(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
                             _ => None,
                         }
                     {
-                        edit_haiku_embed(
-                            &mut search_result_msg,
-                            haiku,
-                            *id,
-                            Some(format!(
-                                "Search result {}/{}",
-                                new_index + 1,
-                                search_results.len()
-                            )),
-                            ctx,
-                        )
-                        .await
-                        .expect("Failed to edit search results message");
+                        let embed_data = to_embed_data(*id, &haiku, ctx).await;
+                        search_result_msg
+                            .edit(&ctx.http, |msg| {
+                                msg.embed(|embed| format_haiku_embed(embed_data, embed));
+                                msg.content(format!(
+                                    "Search result {}/{}",
+                                    new_index + 1,
+                                    search_results.len()
+                                ));
+                                msg
+                            })
+                            .await
+                            .expect("Failed to edit search results message");
                         index = new_index;
                         reaction
                             .as_inner_ref()
