@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate diesel;
 
+mod commands;
 mod counting;
 mod database;
 mod formatting;
@@ -8,6 +9,7 @@ pub mod models;
 pub mod schema;
 
 use chrono::{DateTime, Utc};
+use commands::Invokable;
 use counting::{count_line, is_haiku, is_haiku_single};
 use formatting::{format_haiku_embed, to_embed_data};
 use models::{Haiku, HaikuLine};
@@ -270,30 +272,6 @@ async fn on_haiku_line(ctx: &Context, channel: ChannelId, line: HaikuLine) {
 //     Ok(())
 // }
 
-/// Show how long since the bot was last restarted
-// #[command]
-// async fn uptime(ctx: &Context, msg: &Message) -> CommandResult {
-//     let data = ctx.data.read().await;
-//     let uptime_start_lock = data
-//         .get::<UptimeStart>()
-//         .expect("Expected HaikuTracker in TypeMap")
-//         .clone();
-//     let uptime = Utc::now().signed_duration_since(uptime_start_lock);
-//     let days = uptime.num_days();
-//     let uptime = uptime - chrono::Duration::days(days);
-//     let hrs = uptime.num_hours();
-//     let uptime = uptime - chrono::Duration::hours(hrs);
-//     let mins = uptime.num_minutes();
-
-//     msg.reply(
-//         &ctx.http,
-//         format!("Uptime: {} days, {} hours, {} minutes", days, hrs, mins),
-//     )
-//     .await
-//     .expect("Could not send uptime message");
-//     Ok(())
-// }
-
 // #[help]
 // async fn my_help(
 //     context: &Context,
@@ -316,123 +294,19 @@ struct Handler;
 #[async_trait]
 impl EventHandler for Handler {
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
-        if let Interaction::ApplicationCommand(command) = interaction {
-            let content = match command.data.name.as_str() {
-                "ping" => "Hey, I'm alive!".to_string(),
-                // "id" => {
-                //     let options = command
-                //         .data
-                //         .options
-                //         .get(0)
-                //         .expect("Expected user option")
-                //         .resolved
-                //         .as_ref()
-                //         .expect("Expected user object");
-
-                //     if let ApplicationCommandInteractionDataOptionValue::User(user, _member) =
-                //         options
-                //     {
-                //         format!("{}'s id is {}", user.tag(), user.id)
-                //     } else {
-                //         "Please provide a valid user".to_string()
-                //     }
-                // }
-                _ => "not implemented :(".to_string(),
-            };
-
-            if let Err(why) = command
-                .create_interaction_response(&ctx.http, |response| {
-                    response
-                        .kind(InteractionResponseType::ChannelMessageWithSource)
-                        .interaction_response_data(|message| message.content(content))
-                })
-                .await
-            {
-                println!("Cannot respond to slash command: {}", why);
-            }
+        if let Interaction::ApplicationCommand(command_interaction) = interaction {
+            let command =
+                commands::parse_command(&command_interaction).expect("Failed to parse command");
+            let invocation_result = command.invoke(&ctx, &command_interaction).await;
+            invocation_result.expect("Failed to invoke command");
         }
     }
 
     async fn ready(&self, ctx: Context, ready: Ready) {
         println!("{} is connected!", ready.user.name);
-
-        let guild_id = env::var("TEST_GUILD_ID")
-            .expect("Expected a test guild id in the environment")
-            .parse()
-            .expect("Invalid test guild id id");
-        let guild_id = GuildId(guild_id);
-
-        let commands = GuildId::set_application_commands(&guild_id, &ctx.http, |commands| {
-            commands.create_application_command(|command| {
-                command.name("ping").description("A ping command")
-            })
-            // .create_application_command(|command| {
-            //     command.name("id").description("Get a user id").create_option(|option| {
-            //         option
-            //             .name("id")
-            //             .description("The user to lookup")
-            //             .kind(ApplicationCommandOptionType::User)
-            //             .required(true)
-            //     })
-            // })
-            // .create_application_command(|command| {
-            //     command
-            //         .name("welcome")
-            //         .description("Welcome a user")
-            //         .create_option(|option| {
-            //             option
-            //                 .name("user")
-            //                 .description("The user to welcome")
-            //                 .kind(ApplicationCommandOptionType::User)
-            //                 .required(true)
-            //         })
-            //         .create_option(|option| {
-            //             option
-            //                 .name("message")
-            //                 .description("The message to send")
-            //                 .kind(ApplicationCommandOptionType::String)
-            //                 .required(true)
-            //                 .add_string_choice(
-            //                     "Welcome to our cool server! Ask me if you need help",
-            //                     "pizza",
-            //                 )
-            //                 .add_string_choice("Hey, do you want a coffee?", "coffee")
-            //                 .add_string_choice(
-            //                     "Welcome to the club, you're now a good person. Well, I hope.",
-            //                     "club",
-            //                 )
-            //                 .add_string_choice(
-            //                     "I hope that you brought a controller to play together!",
-            //                     "game",
-            //                 )
-            //         })
-            // })
-            // .create_application_command(|command| {
-            //     command
-            //         .name("numberinput")
-            //         .description("Test command for number input")
-            //         .create_option(|option| {
-            //             option
-            //                 .name("int")
-            //                 .description("An integer from 5 to 10")
-            //                 .kind(ApplicationCommandOptionType::Integer)
-            //                 .min_int_value(5)
-            //                 .max_int_value(10)
-            //                 .required(true)
-            //         })
-            //         .create_option(|option| {
-            //             option
-            //                 .name("number")
-            //                 .description("A float from -3.3 to 234.5")
-            //                 .kind(ApplicationCommandOptionType::Number)
-            //                 .min_number_value(-3.3)
-            //                 .max_number_value(234.5)
-            //                 .required(true)
-            //         })
-            // })
-        })
-        .await;
-
+        let commands = commands::register_commands(&ctx)
+            .await
+            .expect("Unable to register commands");
         println!(
             "I now have the following guild slash commands: {:#?}",
             commands
