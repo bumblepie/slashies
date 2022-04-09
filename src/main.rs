@@ -119,25 +119,6 @@ async fn on_haiku_line(ctx: &Context, channel: ChannelId, line: HaikuLine) {
     }
 }
 
-/// Count the number of syllables in a given phrase
-/// This bot uses the CMU dictionary http://www.speech.cs.cmu.edu/cgi-bin/cmudict so some words might be uncountable
-// #[command]
-// async fn count(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-//     match count_line(&args.message()) {
-//         Ok(syllables) => {
-//             msg.reply(
-//                 &ctx.http,
-//                 format!("Message '{}' has {} syllables", args.message(), syllables),
-//             )
-//             .await?;
-//         }
-//         Err(_) => {
-//             msg.reply(&ctx.http, "Message is not countable").await?;
-//         }
-//     }
-//     Ok(())
-// }
-
 /// Fetch a specific haiku from this server by its id
 // #[command]
 // async fn get(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
@@ -295,10 +276,9 @@ struct Handler;
 impl EventHandler for Handler {
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         if let Interaction::ApplicationCommand(command_interaction) = interaction {
-            let command =
-                commands::parse_command(&command_interaction).expect("Failed to parse command");
-            let invocation_result = command.invoke(&ctx, &command_interaction).await;
-            invocation_result.expect("Failed to invoke command");
+            commands::parse_and_invoke_command(&ctx, &command_interaction)
+                .await
+                .expect("Failed to invoke command");
         }
     }
 

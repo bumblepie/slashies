@@ -1,6 +1,4 @@
-use std::env;
-
-use crate::UptimeStart;
+use crate::{counting::count_line, UptimeStart};
 use chrono::Utc;
 use serenity::{
     async_trait,
@@ -9,18 +7,24 @@ use serenity::{
     model::{
         id::GuildId,
         interactions::{
-            application_command::{ApplicationCommand, ApplicationCommandInteraction},
+            application_command::{
+                ApplicationCommand, ApplicationCommandInteraction,
+                ApplicationCommandInteractionDataOptionValue, ApplicationCommandOptionType,
+            },
             InteractionResponseType,
         },
     },
 };
+use std::env;
 
-pub type CommandResult = Result<(), ()>;
-
-pub fn parse_command(command: &ApplicationCommandInteraction) -> Result<impl Command, ()> {
+pub async fn parse_and_invoke_command(
+    ctx: &Context,
+    command: &ApplicationCommandInteraction,
+) -> Result<(), CommandError> {
     match command.data.name.as_ref() {
-        UPTIME_COMMAND_NAME => UptimeCommand::parse(command),
-        _ => Err(()),
+        UPTIME_COMMAND_NAME => Ok(UptimeCommand::parse(command)?.invoke(ctx, command).await?),
+        COUNT_COMMAND_NAME => Ok(CountCommand::parse(command)?.invoke(ctx, command).await?),
+        _ => Err(CommandError::UnknownCommand),
     }
 }
 
@@ -31,21 +35,53 @@ pub async fn register_commands(ctx: &Context) -> Result<Vec<ApplicationCommand>,
         .expect("Invalid test guild id id");
     let guild_id = GuildId(guild_id);
     GuildId::set_application_commands(&guild_id, &ctx.http, |commands_builder| {
-        commands_builder.create_application_command(|command| UptimeCommand::register(command))
+        commands_builder
+            .create_application_command(|command| UptimeCommand::register(command))
+            .create_application_command(|command| CountCommand::register(command))
     })
     .await
 }
 
+#[derive(Debug)]
+pub enum ParseError {
+    MissingOption,
+    InvalidOption,
+}
+
+#[derive(Debug)]
+pub struct InvocationError;
+
+#[derive(Debug)]
+pub enum CommandError {
+    Parse(ParseError),
+    Invocation(InvocationError),
+    UnknownCommand,
+}
+impl From<ParseError> for CommandError {
+    fn from(err: ParseError) -> Self {
+        Self::Parse(err)
+    }
+}
+
+impl From<InvocationError> for CommandError {
+    fn from(err: InvocationError) -> Self {
+        Self::Invocation(err)
+    }
+}
+
 #[async_trait]
-pub trait Command: Sized + Invokable {
-    fn parse(command: &ApplicationCommandInteraction) -> Result<Self, ()>;
+pub trait Command: Invokable + Sized {
+    fn parse(command: &ApplicationCommandInteraction) -> Result<Self, ParseError>;
     fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand;
 }
 
 #[async_trait]
-pub trait Invokable: Sized {
-    async fn invoke(&self, ctx: &Context, command: &ApplicationCommandInteraction)
-        -> CommandResult;
+pub trait Invokable {
+    async fn invoke(
+        &self,
+        ctx: &Context,
+        command: &ApplicationCommandInteraction,
+    ) -> Result<(), InvocationError>;
 }
 
 pub struct UptimeCommand;
@@ -53,7 +89,7 @@ const UPTIME_COMMAND_NAME: &'static str = "uptime";
 
 #[async_trait]
 impl Command for UptimeCommand {
-    fn parse(_command: &ApplicationCommandInteraction) -> Result<Self, ()> {
+    fn parse(_command: &ApplicationCommandInteraction) -> Result<Self, ParseError> {
         Ok(Self)
     }
 
@@ -66,12 +102,11 @@ impl Command for UptimeCommand {
 
 #[async_trait]
 impl Invokable for UptimeCommand {
-    /// Show how long since the bot was last restarted
     async fn invoke(
         &self,
         ctx: &Context,
         command: &ApplicationCommandInteraction,
-    ) -> CommandResult {
+    ) -> Result<(), InvocationError> {
         let data = ctx.data.read().await;
         let uptime_start_lock = data
             .get::<UptimeStart>()
@@ -97,6 +132,84 @@ impl Invokable for UptimeCommand {
             })
             .await
             .expect("Could not send uptime message");
+        Ok(())
+    }
+}
+
+pub struct CountCommand {
+    phrase: String,
+}
+const COUNT_COMMAND_NAME: &'static str = "count";
+
+#[async_trait]
+impl Command for CountCommand {
+    fn parse(command: &ApplicationCommandInteraction) -> Result<Self, ParseError> {
+        let phrase = command
+            .data
+            .options
+            .iter()
+            .find(|option| option.name == "phrase")
+            .ok_or(ParseError::MissingOption)?
+            .resolved
+            .clone()
+            .ok_or(ParseError::MissingOption)?;
+        if let ApplicationCommandInteractionDataOptionValue::String(phrase) = phrase {
+            Ok(Self { phrase })
+        } else {
+            Err(ParseError::InvalidOption)
+        }
+    }
+
+    fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
+        command
+            .name(COUNT_COMMAND_NAME)
+            .description("Count the number of syllables in a given phrase")
+            .create_option(|option| {
+                option
+                    .name("phrase")
+                    .description("The phrase to count")
+                    .kind(ApplicationCommandOptionType::String)
+                    .required(true)
+            })
+    }
+}
+
+#[async_trait]
+impl Invokable for CountCommand {
+    async fn invoke(
+        &self,
+        ctx: &Context,
+        command: &ApplicationCommandInteraction,
+    ) -> Result<(), InvocationError> {
+        match count_line(&self.phrase) {
+            Ok(syllables) => {
+                command
+                    .create_interaction_response(&ctx.http, |response| {
+                        response
+                            .kind(InteractionResponseType::ChannelMessageWithSource)
+                            .interaction_response_data(|message| {
+                                message.content(format!(
+                                    "The phrase '{}' has {} syllables",
+                                    self.phrase, syllables
+                                ))
+                            })
+                    })
+                    .await
+                    .expect("Could not send uptime message");
+            }
+            Err(_) => {
+                command
+                    .create_interaction_response(&ctx.http, |response| {
+                        response
+                            .kind(InteractionResponseType::ChannelMessageWithSource)
+                            .interaction_response_data(|message| {
+                                message.content("Could not count this phrase")
+                            })
+                    })
+                    .await
+                    .expect("Could not send uptime message");
+            }
+        }
         Ok(())
     }
 }
