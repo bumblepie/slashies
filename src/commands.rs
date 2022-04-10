@@ -16,6 +16,7 @@ use serenity::{
                 ApplicationCommand, ApplicationCommandInteraction,
                 ApplicationCommandInteractionDataOptionValue, ApplicationCommandOptionType,
             },
+            message_component::{ButtonStyle, MessageComponentInteraction},
             InteractionResponseType,
         },
     },
@@ -27,6 +28,7 @@ pub enum Commands {
     Count(CountCommand),
     GetHaiku(GetHaikuCommand),
     RandomHaiku(RandomHaikuCommand),
+    Search(SearchCommand),
 }
 
 // To be derived via macro
@@ -40,6 +42,7 @@ impl Commands {
             COUNT_COMMAND_NAME => Ok(Self::Count(CountCommand::parse(command)?)),
             GET_HAIKU_COMMAND_NAME => Ok(Self::GetHaiku(GetHaikuCommand::parse(command)?)),
             RANDOM_HAIKU_COMMAND_NAME => Ok(Self::RandomHaiku(RandomHaikuCommand::parse(command)?)),
+            SEARCH_COMMAND_NAME => Ok(Self::Search(SearchCommand::parse(command)?)),
             _ => Err(ParseError::UnknownCommand),
         }
     }
@@ -54,6 +57,7 @@ impl Commands {
             Self::Count(command) => command.invoke(ctx, command_interaction).await,
             Self::GetHaiku(command) => command.invoke(ctx, command_interaction).await,
             Self::RandomHaiku(command) => command.invoke(ctx, command_interaction).await,
+            Self::Search(command) => command.invoke(ctx, command_interaction).await,
         }
     }
 }
@@ -71,6 +75,7 @@ pub async fn register_commands(ctx: &Context) -> Result<Vec<ApplicationCommand>,
             .create_application_command(|command| CountCommand::register(command))
             .create_application_command(|command| GetHaikuCommand::register(command))
             .create_application_command(|command| RandomHaikuCommand::register(command))
+            .create_application_command(|command| SearchCommand::register(command))
     })
     .await
 }
@@ -346,6 +351,172 @@ impl Invokable for RandomHaikuCommand {
                 })
                 .await
                 .expect("Failed to send haiku msg");
+        }
+        Ok(())
+    }
+}
+
+pub struct SearchCommand {
+    keywords: String,
+}
+const SEARCH_COMMAND_NAME: &'static str = "search";
+
+#[async_trait]
+impl Command for SearchCommand {
+    fn parse(command: &ApplicationCommandInteraction) -> Result<Self, ParseError> {
+        let keywords = command
+            .data
+            .options
+            .iter()
+            .find(|option| option.name == "keywords")
+            .ok_or(ParseError::MissingOption)?
+            .resolved
+            .clone()
+            .ok_or(ParseError::MissingOption)?;
+        if let ApplicationCommandInteractionDataOptionValue::String(keywords) = keywords {
+            Ok(Self { keywords })
+        } else {
+            Err(ParseError::InvalidOption)
+        }
+    }
+
+    fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
+        command
+            .name(SEARCH_COMMAND_NAME)
+            .description("Search for a haiku")
+            .create_option(|option| {
+                option
+                    .name("keywords")
+                    .description("A set of keywords to search for, separated by spaces")
+                    .kind(ApplicationCommandOptionType::String)
+                    .required(true)
+            })
+    }
+}
+
+#[async_trait]
+impl Invokable for SearchCommand {
+    async fn invoke(
+        &self,
+        ctx: &Context,
+        command: &ApplicationCommandInteraction,
+    ) -> Result<(), InvocationError> {
+        let keywords = self
+            .keywords
+            .split_whitespace()
+            .map(|word| word.to_owned())
+            .collect::<Vec<String>>();
+
+        if let Some(server_id) = command.guild_id {
+            let db_connection = database::establish_connection();
+            let search_results = database::search_haikus(server_id, keywords, &db_connection);
+            if search_results.is_empty() {
+                command
+                    .create_interaction_response(&ctx.http, |response| {
+                        response
+                            .kind(InteractionResponseType::ChannelMessageWithSource)
+                            .interaction_response_data(|message| {
+                                message.content("No haikus found for search terms.")
+                            })
+                    })
+                    .await
+                    .expect("Could not send search results message");
+            } else {
+                let mut index = 0;
+                let (id, haiku) = search_results.get(index).unwrap();
+                let embed_data = to_embed_data(*id, &haiku, ctx).await;
+                command
+                    .create_interaction_response(&ctx.http, |response| {
+                        response
+                            .kind(InteractionResponseType::ChannelMessageWithSource)
+                            .interaction_response_data(|message| {
+                                let mut embed = CreateEmbed::default();
+                                format_haiku_embed(embed_data, &mut embed);
+                                message.add_embed(embed);
+                                message.content(format!(
+                                    "Search result {}/{}",
+                                    index + 1,
+                                    search_results.len()
+                                ));
+                                message.components(|components| {
+                                    components.create_action_row(|row| {
+                                        row.create_button(|button| {
+                                            button
+                                                .custom_id("previous")
+                                                .label("Previous")
+                                                .style(ButtonStyle::Primary)
+                                        })
+                                        .create_button(
+                                            |button| {
+                                                button
+                                                    .custom_id("next")
+                                                    .label("Next")
+                                                    .style(ButtonStyle::Primary)
+                                            },
+                                        )
+                                    })
+                                });
+                                message
+                            })
+                    })
+                    .await
+                    .expect("Failed to send search results");
+                //     let mut search_result_msg = ;
+                //     search_result_msg
+                //         .react(&ctx.http, ReactionType::Unicode("⬅️".to_owned()))
+                //         .await
+                //         .expect("Failed to add reaction to search results msg");
+                //     search_result_msg
+                //         .react(&ctx.http, ReactionType::Unicode("➡️".to_owned()))
+                //         .await
+                //         .expect("Failed to add reaction to search results msg");
+                //     loop {
+                //         if let Some(reaction) = search_result_msg
+                //             .await_reaction(ctx)
+                //             .timeout(Duration::from_secs(300))
+                //             .await
+                //         {
+                //             if let Some((new_index, (id, haiku))) =
+                //                 match reaction.as_inner_ref().emoji.as_data().as_str() {
+                //                     "➡️" => {
+                //                         let new_index = index + 1;
+                //                         search_results.get(new_index).map(|x| (new_index, x))
+                //                     }
+                //                     "⬅️" => {
+                //                         if let Some(new_index) = index.checked_sub(1) {
+                //                             search_results.get(new_index).map(|x| (new_index, x))
+                //                         } else {
+                //                             None
+                //                         }
+                //                     }
+                //                     _ => None,
+                //                 }
+                //             {
+                //                 let embed_data = to_embed_data(*id, &haiku, ctx).await;
+                //                 search_result_msg
+                //                     .edit(&ctx.http, |msg| {
+                //                         msg.embed(|embed| format_haiku_embed(embed_data, embed));
+                //                         msg.content(format!(
+                //                             "Search result {}/{}",
+                //                             new_index + 1,
+                //                             search_results.len()
+                //                         ));
+                //                         msg
+                //                     })
+                //                     .await
+                //                     .expect("Failed to edit search results message");
+                //                 index = new_index;
+                //                 reaction
+                //                     .as_inner_ref()
+                //                     .delete(&ctx.http)
+                //                     .await
+                //                     .expect("Unable to delete reaction");
+                //             }
+                //         } else {
+                //             break;
+                //         }
+                //     }
+            }
         }
         Ok(())
     }
