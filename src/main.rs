@@ -119,28 +119,6 @@ async fn on_haiku_line(ctx: &Context, channel: ChannelId, line: HaikuLine) {
     }
 }
 
-/// Fetch a random haiku from this server
-// #[command]
-// async fn random(ctx: &Context, msg: &Message) -> CommandResult {
-//     let haiku_and_id = if let Some(server_id) = msg.guild_id {
-//         let db_connection = database::establish_connection();
-//         database::get_random_haiku(server_id, &db_connection)
-//     } else {
-//         None
-//     };
-//     if let Some((id, haiku)) = haiku_and_id {
-//         let embed_data = to_embed_data(id, &haiku, ctx).await;
-//         msg.channel_id
-//             .send_message(&ctx.http, |msg| {
-//                 msg.embed(|embed| format_haiku_embed(embed_data, embed));
-//                 msg
-//             })
-//             .await
-//             .expect("Failed to send haiku msg");
-//     }
-//     Ok(())
-// }
-
 /// Search for a haiku, using a set of keywords separated by spaces
 /// Returns up to five matching haiku from this server
 // #[command]

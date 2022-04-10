@@ -26,6 +26,7 @@ pub enum Commands {
     Uptime(UptimeCommand),
     Count(CountCommand),
     GetHaiku(GetHaikuCommand),
+    RandomHaiku(RandomHaikuCommand),
 }
 
 // To be derived via macro
@@ -38,6 +39,7 @@ impl Commands {
             UPTIME_COMMAND_NAME => Ok(Self::Uptime(UptimeCommand::parse(command)?)),
             COUNT_COMMAND_NAME => Ok(Self::Count(CountCommand::parse(command)?)),
             GET_HAIKU_COMMAND_NAME => Ok(Self::GetHaiku(GetHaikuCommand::parse(command)?)),
+            RANDOM_HAIKU_COMMAND_NAME => Ok(Self::RandomHaiku(RandomHaikuCommand::parse(command)?)),
             _ => Err(ParseError::UnknownCommand),
         }
     }
@@ -51,6 +53,7 @@ impl Commands {
             Self::Uptime(command) => command.invoke(ctx, command_interaction).await,
             Self::Count(command) => command.invoke(ctx, command_interaction).await,
             Self::GetHaiku(command) => command.invoke(ctx, command_interaction).await,
+            Self::RandomHaiku(command) => command.invoke(ctx, command_interaction).await,
         }
     }
 }
@@ -67,6 +70,7 @@ pub async fn register_commands(ctx: &Context) -> Result<Vec<ApplicationCommand>,
             .create_application_command(|command| UptimeCommand::register(command))
             .create_application_command(|command| CountCommand::register(command))
             .create_application_command(|command| GetHaikuCommand::register(command))
+            .create_application_command(|command| RandomHaikuCommand::register(command))
     })
     .await
 }
@@ -289,6 +293,55 @@ impl Invokable for GetHaikuCommand {
                             let mut embed = CreateEmbed::default();
                             format_haiku_embed(embed_data, &mut embed);
                             message.add_embed(embed)
+                        })
+                })
+                .await
+                .expect("Failed to send haiku msg");
+        }
+        Ok(())
+    }
+}
+
+pub struct RandomHaikuCommand;
+const RANDOM_HAIKU_COMMAND_NAME: &'static str = "randomhaiku";
+
+#[async_trait]
+impl Command for RandomHaikuCommand {
+    fn parse(_command: &ApplicationCommandInteraction) -> Result<Self, ParseError> {
+        Ok(Self)
+    }
+
+    fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
+        command
+            .name(RANDOM_HAIKU_COMMAND_NAME)
+            .description("Fetch a random haiku from this server")
+    }
+}
+
+#[async_trait]
+impl Invokable for RandomHaikuCommand {
+    async fn invoke(
+        &self,
+        ctx: &Context,
+        command: &ApplicationCommandInteraction,
+    ) -> Result<(), InvocationError> {
+        let haiku_and_id = if let Some(server_id) = command.guild_id {
+            let db_connection = database::establish_connection();
+            database::get_random_haiku(server_id, &db_connection)
+        } else {
+            None
+        };
+        if let Some((id, haiku)) = haiku_and_id {
+            let embed_data = to_embed_data(id, &haiku, ctx).await;
+            command
+                .create_interaction_response(&ctx.http, |response| {
+                    response
+                        .kind(InteractionResponseType::ChannelMessageWithSource)
+                        .interaction_response_data(|message| {
+                            let mut embed = CreateEmbed::default();
+                            format_haiku_embed(embed_data, &mut embed);
+                            message.add_embed(embed);
+                            message
                         })
                 })
                 .await
