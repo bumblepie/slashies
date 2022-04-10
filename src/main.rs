@@ -9,6 +9,7 @@ pub mod models;
 pub mod schema;
 
 use chrono::{DateTime, Utc};
+use commands::Commands;
 use counting::{is_haiku, is_haiku_single};
 use formatting::{format_haiku_embed, to_embed_data};
 use models::{Haiku, HaikuLine};
@@ -252,7 +253,9 @@ struct Handler;
 impl EventHandler for Handler {
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         if let Interaction::ApplicationCommand(command_interaction) = interaction {
-            commands::parse_and_invoke_command(&ctx, &command_interaction)
+            Commands::parse(&ctx, &command_interaction)
+                .expect("Failed to parse command")
+                .invoke(&ctx, &command_interaction)
                 .await
                 .expect("Failed to invoke command");
         }

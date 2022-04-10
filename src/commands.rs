@@ -22,20 +22,40 @@ use serenity::{
 };
 use std::env;
 
-pub async fn parse_and_invoke_command(
-    ctx: &Context,
-    command: &ApplicationCommandInteraction,
-) -> Result<(), CommandError> {
-    match command.data.name.as_ref() {
-        UPTIME_COMMAND_NAME => Ok(UptimeCommand::parse(command)?.invoke(ctx, command).await?),
-        COUNT_COMMAND_NAME => Ok(CountCommand::parse(command)?.invoke(ctx, command).await?),
-        GET_HAIKU_COMMAND_NAME => Ok(GetHaikuCommand::parse(command)?
-            .invoke(ctx, command)
-            .await?),
-        _ => Err(CommandError::UnknownCommand),
+pub enum Commands {
+    Uptime(UptimeCommand),
+    Count(CountCommand),
+    GetHaiku(GetHaikuCommand),
+}
+
+// To be derived via macro
+impl Commands {
+    pub fn parse(
+        _ctx: &Context,
+        command: &ApplicationCommandInteraction,
+    ) -> Result<Self, ParseError> {
+        match command.data.name.as_ref() {
+            UPTIME_COMMAND_NAME => Ok(Self::Uptime(UptimeCommand::parse(command)?)),
+            COUNT_COMMAND_NAME => Ok(Self::Count(CountCommand::parse(command)?)),
+            GET_HAIKU_COMMAND_NAME => Ok(Self::GetHaiku(GetHaikuCommand::parse(command)?)),
+            _ => Err(ParseError::UnknownCommand),
+        }
+    }
+
+    pub async fn invoke(
+        &self,
+        ctx: &Context,
+        command_interaction: &ApplicationCommandInteraction,
+    ) -> Result<(), InvocationError> {
+        match self {
+            Self::Uptime(command) => command.invoke(ctx, command_interaction).await,
+            Self::Count(command) => command.invoke(ctx, command_interaction).await,
+            Self::GetHaiku(command) => command.invoke(ctx, command_interaction).await,
+        }
     }
 }
 
+// To be replaced with register_commands!(GuildID?, [CommandType, ...]) macro
 pub async fn register_commands(ctx: &Context) -> Result<Vec<ApplicationCommand>, serenity::Error> {
     let guild_id = env::var("TEST_GUILD_ID")
         .expect("Expected a test guild id in the environment")
@@ -55,29 +75,13 @@ pub async fn register_commands(ctx: &Context) -> Result<Vec<ApplicationCommand>,
 pub enum ParseError {
     MissingOption,
     InvalidOption,
+    UnknownCommand,
 }
 
 #[derive(Debug)]
 pub struct InvocationError;
 
-#[derive(Debug)]
-pub enum CommandError {
-    Parse(ParseError),
-    Invocation(InvocationError),
-    UnknownCommand,
-}
-impl From<ParseError> for CommandError {
-    fn from(err: ParseError) -> Self {
-        Self::Parse(err)
-    }
-}
-
-impl From<InvocationError> for CommandError {
-    fn from(err: InvocationError) -> Self {
-        Self::Invocation(err)
-    }
-}
-
+// To be derivable via macro
 #[async_trait]
 pub trait Command: Invokable + Sized {
     fn parse(command: &ApplicationCommandInteraction) -> Result<Self, ParseError>;
