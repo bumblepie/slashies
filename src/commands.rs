@@ -1,8 +1,13 @@
-use crate::{counting::count_line, UptimeStart};
+use crate::{
+    counting::count_line,
+    database,
+    formatting::{format_haiku_embed, to_embed_data},
+    UptimeStart,
+};
 use chrono::Utc;
 use serenity::{
     async_trait,
-    builder::CreateApplicationCommand,
+    builder::{CreateApplicationCommand, CreateEmbed},
     client::Context,
     model::{
         id::GuildId,
@@ -24,6 +29,9 @@ pub async fn parse_and_invoke_command(
     match command.data.name.as_ref() {
         UPTIME_COMMAND_NAME => Ok(UptimeCommand::parse(command)?.invoke(ctx, command).await?),
         COUNT_COMMAND_NAME => Ok(CountCommand::parse(command)?.invoke(ctx, command).await?),
+        GET_HAIKU_COMMAND_NAME => Ok(GetHaikuCommand::parse(command)?
+            .invoke(ctx, command)
+            .await?),
         _ => Err(CommandError::UnknownCommand),
     }
 }
@@ -38,6 +46,7 @@ pub async fn register_commands(ctx: &Context) -> Result<Vec<ApplicationCommand>,
         commands_builder
             .create_application_command(|command| UptimeCommand::register(command))
             .create_application_command(|command| CountCommand::register(command))
+            .create_application_command(|command| GetHaikuCommand::register(command))
     })
     .await
 }
@@ -209,6 +218,77 @@ impl Invokable for CountCommand {
                     .await
                     .expect("Could not send uptime message");
             }
+        }
+        Ok(())
+    }
+}
+
+pub struct GetHaikuCommand {
+    id: i64,
+}
+const GET_HAIKU_COMMAND_NAME: &'static str = "gethaiku";
+
+#[async_trait]
+impl Command for GetHaikuCommand {
+    fn parse(command: &ApplicationCommandInteraction) -> Result<Self, ParseError> {
+        let id = command
+            .data
+            .options
+            .iter()
+            .find(|option| option.name == "id")
+            .ok_or(ParseError::MissingOption)?
+            .resolved
+            .clone()
+            .ok_or(ParseError::MissingOption)?;
+        if let ApplicationCommandInteractionDataOptionValue::Integer(id) = id {
+            Ok(Self { id })
+        } else {
+            Err(ParseError::InvalidOption)
+        }
+    }
+
+    fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
+        command
+            .name(GET_HAIKU_COMMAND_NAME)
+            .description("Fetch a specific haiku from this server by its id")
+            .create_option(|option| {
+                option
+                    .name("id")
+                    .description("Id of the haiku to fetch")
+                    .kind(ApplicationCommandOptionType::Integer)
+                    .required(true)
+            })
+    }
+}
+
+#[async_trait]
+impl Invokable for GetHaikuCommand {
+    async fn invoke(
+        &self,
+        ctx: &Context,
+        command: &ApplicationCommandInteraction,
+    ) -> Result<(), InvocationError> {
+        let haiku_and_id = match (self.id, command.guild_id) {
+            (id, Some(server_id)) => {
+                let db_connection = database::establish_connection();
+                database::get_haiku(server_id, id, &db_connection)
+            }
+            _ => None,
+        };
+        if let Some((id, haiku)) = haiku_and_id {
+            let embed_data = to_embed_data(id, &haiku, ctx).await;
+            command
+                .create_interaction_response(&ctx.http, |response| {
+                    response
+                        .kind(InteractionResponseType::ChannelMessageWithSource)
+                        .interaction_response_data(|message| {
+                            let mut embed = CreateEmbed::default();
+                            format_haiku_embed(embed_data, &mut embed);
+                            message.add_embed(embed)
+                        })
+                })
+                .await
+                .expect("Failed to send haiku msg");
         }
         Ok(())
     }

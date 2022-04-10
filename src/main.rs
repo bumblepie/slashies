@@ -9,8 +9,7 @@ pub mod models;
 pub mod schema;
 
 use chrono::{DateTime, Utc};
-use commands::Invokable;
-use counting::{count_line, is_haiku, is_haiku_single};
+use counting::{is_haiku, is_haiku_single};
 use formatting::{format_haiku_embed, to_embed_data};
 use models::{Haiku, HaikuLine};
 use serenity::{
@@ -22,8 +21,8 @@ use serenity::{
     prelude::TypeMapKey,
     Client,
 };
+use std::env;
 use std::{collections::HashMap, sync::Arc};
-use std::{env, time::Duration};
 
 struct HaikuTracker;
 impl TypeMapKey for HaikuTracker {
@@ -118,29 +117,6 @@ async fn on_haiku_line(ctx: &Context, channel: ChannelId, line: HaikuLine) {
             .expect("Failed to send haiku msg");
     }
 }
-
-/// Fetch a specific haiku from this server by its id
-// #[command]
-// async fn get(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-//     let haiku_and_id = match (args.single(), msg.guild_id) {
-//         (Ok(id), Some(server_id)) => {
-//             let db_connection = database::establish_connection();
-//             database::get_haiku(server_id, id, &db_connection)
-//         }
-//         _ => None,
-//     };
-//     if let Some((id, haiku)) = haiku_and_id {
-//         let embed_data = to_embed_data(id, &haiku, ctx).await;
-//         msg.channel_id
-//             .send_message(&ctx.http, |msg| {
-//                 msg.embed(|embed| format_haiku_embed(embed_data, embed));
-//                 msg
-//             })
-//             .await
-//             .expect("Failed to send haiku msg");
-//     }
-//     Ok(())
-// }
 
 /// Fetch a random haiku from this server
 // #[command]
