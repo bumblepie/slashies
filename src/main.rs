@@ -10,7 +10,7 @@ pub mod schema;
 
 use chrono::{DateTime, Utc};
 use commands::Commands;
-use commands::ComponentInteractionHandler;
+use commands::MessageComponentInteractionHandler;
 use counting::{is_haiku, is_haiku_single};
 use dashmap::DashMap;
 use formatting::{format_haiku_embed, to_embed_data};
@@ -37,20 +37,9 @@ impl TypeMapKey for UptimeStart {
     type Value = DateTime<Utc>;
 }
 
-struct ComponentInteractionHandlers;
-impl TypeMapKey for ComponentInteractionHandlers {
-    type Value = DashMap<InteractionId, Box<dyn ComponentInteractionHandler + Send + Sync>>;
-}
-
-async fn on_message(ctx: &Context, msg: &Message) {
-    let channel = msg.channel_id;
-    let lines = msg.content.lines().map(|content| HaikuLine {
-        author: msg.author.id,
-        content: content.to_owned(),
-    });
-    for line in lines {
-        on_haiku_line(ctx, channel, line).await;
-    }
+struct MessageComponentInteractionHandlers;
+impl TypeMapKey for MessageComponentInteractionHandlers {
+    type Value = DashMap<InteractionId, Box<dyn MessageComponentInteractionHandler + Send + Sync>>;
 }
 
 async fn on_haiku_line(ctx: &Context, channel: ChannelId, line: HaikuLine) {
@@ -159,7 +148,7 @@ impl EventHandler for Handler {
                 if let Some(ref original_interaction) = component_interaction.message.interaction {
                     let data = ctx.data.read().await;
                     let handlers = data
-                        .get::<ComponentInteractionHandlers>()
+                        .get::<MessageComponentInteractionHandlers>()
                         .expect("Expected Handlers in TypeMap");
                     let mut handler = handlers
                         .get_mut(&original_interaction.id)
@@ -186,14 +175,17 @@ impl EventHandler for Handler {
             "I now have the following guild slash commands: {:#?}",
             commands
         );
+    }
 
-        // let guild_command =
-        //     ApplicationCommand::create_global_application_command(&ctx.http, |command| {
-        //         command.name("wonderful_command").description("An amazing command")
-        //     })
-        //     .await;
-
-        // println!("I created the following global slash command: {:#?}", guild_command);
+    async fn message(&self, ctx: Context, msg: Message) {
+        let channel = msg.channel_id;
+        let lines = msg.content.lines().map(|content| HaikuLine {
+            author: msg.author.id,
+            content: content.to_owned(),
+        });
+        for line in lines {
+            on_haiku_line(&ctx, channel, line).await;
+        }
     }
 }
 
@@ -204,12 +196,6 @@ async fn main() {
         .expect("Expected a user id in the environment")
         .parse::<u64>()
         .expect("Invalid user id");
-
-    // let framework = StandardFramework::new()
-    //     .configure(|c| c.on_mention(Some(UserId(user_id))).prefix(""))
-    //     .normal_message(on_message)
-    //     .group(&GENERAL_GROUP)
-    //     .help(&MY_HELP);
     let mut client = Client::builder(&token)
         // .framework(framework)
         .event_handler(Handler)
@@ -228,7 +214,7 @@ async fn main() {
         let mut data = client.data.write().await;
         data.insert::<HaikuTracker>(Arc::new(RwLock::new(HashMap::new())));
         data.insert::<UptimeStart>(Utc::now());
-        data.insert::<ComponentInteractionHandlers>(DashMap::new());
+        data.insert::<MessageComponentInteractionHandlers>(DashMap::new());
     }
 
     if let Err(why) = client.start().await {
