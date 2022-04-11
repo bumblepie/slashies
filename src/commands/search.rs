@@ -1,7 +1,3 @@
-use super::{
-    ApplicationCommandInteractionHandler, Command, InvocationError,
-    MessageComponentInteractionHandler, ParseError,
-};
 use crate::{
     database,
     formatting::{format_haiku_embed, to_embed_data},
@@ -23,6 +19,10 @@ use serenity::{
             InteractionResponseType,
         },
     },
+};
+use slash_helper::{
+    ApplicationCommandInteractionHandler, Command, InvocationError,
+    MessageComponentInteractionHandler, ParseError,
 };
 
 pub struct SearchCommand {

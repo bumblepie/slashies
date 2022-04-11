@@ -459,6 +459,8 @@ dependencies = [
  "rand",
  "regex",
  "serenity",
+ "slash-helper",
+ "slash-helper-macros",
  "tokio",
 ]
 
@@ -1114,6 +1116,23 @@ name = "slab"
 version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eb703cfe953bccee95685111adeedb76fabe4e97549a58d16f03ea7b9367bb32"
+
+[[package]]
+name = "slash-helper"
+version = "0.1.0"
+dependencies = [
+ "serenity",
+]
+
+[[package]]
+name = "slash-helper-macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "slash-helper",
+ "syn",
+]
 
 [[package]]
 name = "smallvec"

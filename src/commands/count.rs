@@ -1,4 +1,3 @@
-use super::{ApplicationCommandInteractionHandler, Command, InvocationError, ParseError};
 use crate::counting::count_line;
 use serenity::{
     async_trait,
@@ -12,6 +11,7 @@ use serenity::{
         InteractionResponseType,
     },
 };
+use slash_helper::{ApplicationCommandInteractionHandler, Command, InvocationError, ParseError};
 
 pub struct CountCommand {
     phrase: String,

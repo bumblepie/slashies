@@ -1,4 +1,3 @@
-use super::{ApplicationCommandInteractionHandler, Command, InvocationError, ParseError};
 use crate::{
     database,
     formatting::{format_haiku_embed, to_embed_data},
@@ -11,6 +10,7 @@ use serenity::{
         application_command::ApplicationCommandInteraction, InteractionResponseType,
     },
 };
+use slash_helper::{ApplicationCommandInteractionHandler, Command, InvocationError, ParseError};
 
 pub struct RandomHaikuCommand;
 pub const RANDOM_HAIKU_COMMAND_NAME: &'static str = "randomhaiku";

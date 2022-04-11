@@ -25,3 +25,5 @@ diesel = { version = "1", features = ["postgres", "chrono"] }
 rand = "0.7"
 diesel_full_text_search = "1"
 dashmap = "5.2"
+slash-helper = { path = "./slash-helper" }
+slash-helper-macros = { path = "./slash-helper-macros" }

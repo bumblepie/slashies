@@ -1,4 +1,3 @@
-use super::{ApplicationCommandInteractionHandler, Command, InvocationError, ParseError};
 use crate::{
     database,
     formatting::{format_haiku_embed, to_embed_data},
@@ -15,6 +14,7 @@ use serenity::{
         InteractionResponseType,
     },
 };
+use slash_helper::{ApplicationCommandInteractionHandler, Command, InvocationError, ParseError};
 
 pub struct GetHaikuCommand {
     id: i64,

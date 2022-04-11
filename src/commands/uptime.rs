@@ -1,6 +1,5 @@
 use crate::UptimeStart;
 
-use super::{ApplicationCommandInteractionHandler, Command, InvocationError, ParseError};
 use chrono::Utc;
 use serenity::{
     async_trait,
@@ -10,6 +9,7 @@ use serenity::{
         application_command::ApplicationCommandInteraction, InteractionResponseType,
     },
 };
+use slash_helper::{ApplicationCommandInteractionHandler, Command, InvocationError, ParseError};
 
 pub struct UptimeCommand;
 pub const UPTIME_COMMAND_NAME: &'static str = "uptime";

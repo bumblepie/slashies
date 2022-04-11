@@ -1,18 +1,3 @@
-use serenity::{
-    async_trait,
-    builder::CreateApplicationCommand,
-    client::Context,
-    model::{
-        channel::Message,
-        id::GuildId,
-        interactions::{
-            application_command::{ApplicationCommand, ApplicationCommandInteraction},
-            message_component::MessageComponentInteraction,
-        },
-    },
-};
-use std::env;
-
 use self::{
     count::{CountCommand, COUNT_COMMAND_NAME},
     gethaiku::{GetHaikuCommand, GET_HAIKU_COMMAND_NAME},
@@ -20,12 +5,16 @@ use self::{
     search::{SearchCommand, SEARCH_COMMAND_NAME},
     uptime::{UptimeCommand, UPTIME_COMMAND_NAME},
 };
+use serenity::{
+    client::Context, model::interactions::application_command::ApplicationCommandInteraction,
+};
+use slash_helper::{ApplicationCommandInteractionHandler, Command, InvocationError, ParseError};
 
-mod count;
-mod gethaiku;
-mod random;
-mod search;
-mod uptime;
+pub mod count;
+pub mod gethaiku;
+pub mod random;
+pub mod search;
+pub mod uptime;
 
 pub enum Commands {
     Uptime(UptimeCommand),
@@ -64,57 +53,4 @@ impl Commands {
             Self::Search(command) => command.invoke(ctx, command_interaction).await,
         }
     }
-}
-
-// To be replaced with register_commands!(GuildID?, [CommandType, ...]) macro
-pub async fn register_commands(ctx: &Context) -> Result<Vec<ApplicationCommand>, serenity::Error> {
-    let guild_id = env::var("TEST_GUILD_ID")
-        .expect("Expected a test guild id in the environment")
-        .parse()
-        .expect("Invalid test guild id id");
-    let guild_id = GuildId(guild_id);
-    GuildId::set_application_commands(&guild_id, &ctx.http, |commands_builder| {
-        commands_builder
-            .create_application_command(|command| UptimeCommand::register(command))
-            .create_application_command(|command| CountCommand::register(command))
-            .create_application_command(|command| GetHaikuCommand::register(command))
-            .create_application_command(|command| RandomHaikuCommand::register(command))
-            .create_application_command(|command| SearchCommand::register(command))
-    })
-    .await
-}
-
-#[derive(Debug)]
-pub enum ParseError {
-    MissingOption,
-    InvalidOption,
-    UnknownCommand,
-}
-
-#[derive(Debug)]
-pub struct InvocationError;
-
-// To be derivable via macro
-pub trait Command: ApplicationCommandInteractionHandler + Sized {
-    fn parse(command: &ApplicationCommandInteraction) -> Result<Self, ParseError>;
-    fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand;
-}
-
-#[async_trait]
-pub trait ApplicationCommandInteractionHandler {
-    async fn invoke(
-        &self,
-        ctx: &Context,
-        command: &ApplicationCommandInteraction,
-    ) -> Result<(), InvocationError>;
-}
-
-#[async_trait]
-pub trait MessageComponentInteractionHandler {
-    async fn invoke(
-        &mut self,
-        ctx: &Context,
-        interaction: &MessageComponentInteraction,
-        original_message: &mut Message,
-    );
 }

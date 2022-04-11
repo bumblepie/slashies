@@ -9,8 +9,10 @@ pub mod models;
 pub mod schema;
 
 use chrono::{DateTime, Utc};
-use commands::Commands;
-use commands::MessageComponentInteractionHandler;
+use commands::{
+    count::CountCommand, gethaiku::GetHaikuCommand, random::RandomHaikuCommand,
+    search::SearchCommand, uptime::UptimeCommand, Commands,
+};
 use counting::{is_haiku, is_haiku_single};
 use dashmap::DashMap;
 use formatting::{format_haiku_embed, to_embed_data};
@@ -24,6 +26,7 @@ use serenity::{
     prelude::TypeMapKey,
     Client,
 };
+use slash_helper::{register_commands, MessageComponentInteractionHandler};
 use std::env;
 use std::{collections::HashMap, sync::Arc};
 
@@ -168,9 +171,23 @@ impl EventHandler for Handler {
 
     async fn ready(&self, ctx: Context, ready: Ready) {
         println!("{} is connected!", ready.user.name);
-        let commands = commands::register_commands(&ctx)
-            .await
-            .expect("Unable to register commands");
+        let guild_id = env::var("TEST_GUILD_ID")
+            .expect("Expected a test guild id in the environment")
+            .parse()
+            .map(|id| GuildId(id))
+            .expect("Invalid test guild id id");
+        let commands = register_commands!(
+            &ctx,
+            Some(guild_id),
+            [
+                UptimeCommand,
+                CountCommand,
+                GetHaikuCommand,
+                RandomHaikuCommand,
+                SearchCommand
+            ]
+        )
+        .expect("Unable to register commands");
         println!(
             "I now have the following guild slash commands: {:#?}",
             commands

@@ -1,0 +1,17 @@
+[package]
+name = "slash-helper"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serenity = { version = "0.10", default-features = false, features = [
+    "cache",
+    "client",
+    "collector",
+    "gateway",
+    "rustls_backend",
+    "model",
+    "unstable_discord_api",
+] }
