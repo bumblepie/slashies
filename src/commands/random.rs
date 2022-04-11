@@ -11,22 +11,13 @@ use serenity::{
     },
 };
 use slash_helper::{ApplicationCommandInteractionHandler, Command, InvocationError, ParseError};
+use slash_helper_macros::Command;
 
+/// Fetch a random haiku from this server
+#[derive(Command)]
+#[name = "randomhaiku"]
 pub struct RandomHaikuCommand;
 pub const RANDOM_HAIKU_COMMAND_NAME: &'static str = "randomhaiku";
-
-#[async_trait]
-impl Command for RandomHaikuCommand {
-    fn parse(_command: &ApplicationCommandInteraction) -> Result<Self, ParseError> {
-        Ok(Self)
-    }
-
-    fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
-        command
-            .name(RANDOM_HAIKU_COMMAND_NAME)
-            .description("Fetch a random haiku from this server")
-    }
-}
 
 #[async_trait]
 impl ApplicationCommandInteractionHandler for RandomHaikuCommand {

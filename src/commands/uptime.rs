@@ -10,21 +10,13 @@ use serenity::{
     },
 };
 use slash_helper::{ApplicationCommandInteractionHandler, Command, InvocationError, ParseError};
+use slash_helper_macros::Command;
 
+/// Show how long since the bot was last restarted
+#[derive(Command)]
+#[name = "uptime"]
 pub struct UptimeCommand;
 pub const UPTIME_COMMAND_NAME: &'static str = "uptime";
-
-impl Command for UptimeCommand {
-    fn parse(_command: &ApplicationCommandInteraction) -> Result<Self, ParseError> {
-        Ok(Self)
-    }
-
-    fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
-        command
-            .name(UPTIME_COMMAND_NAME)
-            .description("Show how long since the bot was last restarted")
-    }
-}
 
 #[async_trait]
 impl ApplicationCommandInteractionHandler for UptimeCommand {
