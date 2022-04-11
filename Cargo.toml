@@ -24,3 +24,4 @@ chrono = "0.4"
 diesel = { version = "1", features = ["postgres", "chrono"] }
 rand = "0.7"
 diesel_full_text_search = "1"
+dashmap = "5.2"

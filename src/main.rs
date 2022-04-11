@@ -10,7 +10,9 @@ pub mod schema;
 
 use chrono::{DateTime, Utc};
 use commands::Commands;
+use commands::ComponentInteractionHandler;
 use counting::{is_haiku, is_haiku_single};
+use dashmap::DashMap;
 use formatting::{format_haiku_embed, to_embed_data};
 use models::{Haiku, HaikuLine};
 use serenity::{
@@ -35,7 +37,11 @@ impl TypeMapKey for UptimeStart {
     type Value = DateTime<Utc>;
 }
 
-// #[hook]
+struct ComponentInteractionHandlers;
+impl TypeMapKey for ComponentInteractionHandlers {
+    type Value = DashMap<InteractionId, Box<dyn ComponentInteractionHandler + Send + Sync>>;
+}
+
 async fn on_message(ctx: &Context, msg: &Message) {
     let channel = msg.channel_id;
     let lines = msg.content.lines().map(|content| HaikuLine {
@@ -141,12 +147,33 @@ struct Handler;
 #[async_trait]
 impl EventHandler for Handler {
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
-        if let Interaction::ApplicationCommand(command_interaction) = interaction {
-            Commands::parse(&ctx, &command_interaction)
-                .expect("Failed to parse command")
-                .invoke(&ctx, &command_interaction)
-                .await
-                .expect("Failed to invoke command");
+        match interaction {
+            Interaction::ApplicationCommand(command_interaction) => {
+                Commands::parse(&ctx, &command_interaction)
+                    .expect("Failed to parse command")
+                    .invoke(&ctx, &command_interaction)
+                    .await
+                    .expect("Failed to invoke command");
+            }
+            Interaction::MessageComponent(component_interaction) => {
+                if let Some(ref original_interaction) = component_interaction.message.interaction {
+                    let data = ctx.data.read().await;
+                    let handlers = data
+                        .get::<ComponentInteractionHandlers>()
+                        .expect("Expected Handlers in TypeMap");
+                    let mut handler = handlers
+                        .get_mut(&original_interaction.id)
+                        .expect("No handler found for interaction");
+                    handler
+                        .invoke(
+                            &ctx,
+                            &component_interaction,
+                            &mut component_interaction.message.clone(),
+                        )
+                        .await;
+                }
+            }
+            _ => (),
         }
     }
 
@@ -201,6 +228,7 @@ async fn main() {
         let mut data = client.data.write().await;
         data.insert::<HaikuTracker>(Arc::new(RwLock::new(HashMap::new())));
         data.insert::<UptimeStart>(Utc::now());
+        data.insert::<ComponentInteractionHandlers>(DashMap::new());
     }
 
     if let Err(why) = client.start().await {

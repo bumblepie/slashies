@@ -2,7 +2,8 @@ use crate::{
     counting::count_line,
     database,
     formatting::{format_haiku_embed, to_embed_data},
-    UptimeStart,
+    models::Haiku,
+    ComponentInteractionHandlers, UptimeStart,
 };
 use chrono::Utc;
 use serenity::{
@@ -10,6 +11,7 @@ use serenity::{
     builder::{CreateApplicationCommand, CreateEmbed},
     client::Context,
     model::{
+        channel::Message,
         id::GuildId,
         interactions::{
             application_command::{
@@ -91,7 +93,6 @@ pub enum ParseError {
 pub struct InvocationError;
 
 // To be derivable via macro
-#[async_trait]
 pub trait Command: Invokable + Sized {
     fn parse(command: &ApplicationCommandInteraction) -> Result<Self, ParseError>;
     fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand;
@@ -106,10 +107,19 @@ pub trait Invokable {
     ) -> Result<(), InvocationError>;
 }
 
+#[async_trait]
+pub trait ComponentInteractionHandler {
+    async fn invoke(
+        &mut self,
+        ctx: &Context,
+        interaction: &MessageComponentInteraction,
+        original_message: &mut Message,
+    );
+}
+
 pub struct UptimeCommand;
 const UPTIME_COMMAND_NAME: &'static str = "uptime";
 
-#[async_trait]
 impl Command for UptimeCommand {
     fn parse(_command: &ApplicationCommandInteraction) -> Result<Self, ParseError> {
         Ok(Self)
@@ -163,7 +173,6 @@ pub struct CountCommand {
 }
 const COUNT_COMMAND_NAME: &'static str = "count";
 
-#[async_trait]
 impl Command for CountCommand {
     fn parse(command: &ApplicationCommandInteraction) -> Result<Self, ParseError> {
         let phrase = command
@@ -241,7 +250,6 @@ pub struct GetHaikuCommand {
 }
 const GET_HAIKU_COMMAND_NAME: &'static str = "gethaiku";
 
-#[async_trait]
 impl Command for GetHaikuCommand {
     fn parse(command: &ApplicationCommandInteraction) -> Result<Self, ParseError> {
         let id = command
@@ -361,7 +369,6 @@ pub struct SearchCommand {
 }
 const SEARCH_COMMAND_NAME: &'static str = "search";
 
-#[async_trait]
 impl Command for SearchCommand {
     fn parse(command: &ApplicationCommandInteraction) -> Result<Self, ParseError> {
         let keywords = command
@@ -422,8 +429,8 @@ impl Invokable for SearchCommand {
                     .await
                     .expect("Could not send search results message");
             } else {
-                let mut index = 0;
-                let (id, haiku) = search_results.get(index).unwrap();
+                let search_index = 0;
+                let (id, haiku) = search_results.get(search_index).unwrap();
                 let embed_data = to_embed_data(*id, &haiku, ctx).await;
                 command
                     .create_interaction_response(&ctx.http, |response| {
@@ -435,7 +442,7 @@ impl Invokable for SearchCommand {
                                 message.add_embed(embed);
                                 message.content(format!(
                                     "Search result {}/{}",
-                                    index + 1,
+                                    search_index + 1,
                                     search_results.len()
                                 ));
                                 message.components(|components| {
@@ -445,6 +452,7 @@ impl Invokable for SearchCommand {
                                                 .custom_id("previous")
                                                 .label("Previous")
                                                 .style(ButtonStyle::Primary)
+                                                .disabled(search_index < 1)
                                         })
                                         .create_button(
                                             |button| {
@@ -452,6 +460,9 @@ impl Invokable for SearchCommand {
                                                     .custom_id("next")
                                                     .label("Next")
                                                     .style(ButtonStyle::Primary)
+                                                    .disabled(
+                                                        search_index >= search_results.len() - 1,
+                                                    )
                                             },
                                         )
                                     })
@@ -461,63 +472,83 @@ impl Invokable for SearchCommand {
                     })
                     .await
                     .expect("Failed to send search results");
-                //     let mut search_result_msg = ;
-                //     search_result_msg
-                //         .react(&ctx.http, ReactionType::Unicode("⬅️".to_owned()))
-                //         .await
-                //         .expect("Failed to add reaction to search results msg");
-                //     search_result_msg
-                //         .react(&ctx.http, ReactionType::Unicode("➡️".to_owned()))
-                //         .await
-                //         .expect("Failed to add reaction to search results msg");
-                //     loop {
-                //         if let Some(reaction) = search_result_msg
-                //             .await_reaction(ctx)
-                //             .timeout(Duration::from_secs(300))
-                //             .await
-                //         {
-                //             if let Some((new_index, (id, haiku))) =
-                //                 match reaction.as_inner_ref().emoji.as_data().as_str() {
-                //                     "➡️" => {
-                //                         let new_index = index + 1;
-                //                         search_results.get(new_index).map(|x| (new_index, x))
-                //                     }
-                //                     "⬅️" => {
-                //                         if let Some(new_index) = index.checked_sub(1) {
-                //                             search_results.get(new_index).map(|x| (new_index, x))
-                //                         } else {
-                //                             None
-                //                         }
-                //                     }
-                //                     _ => None,
-                //                 }
-                //             {
-                //                 let embed_data = to_embed_data(*id, &haiku, ctx).await;
-                //                 search_result_msg
-                //                     .edit(&ctx.http, |msg| {
-                //                         msg.embed(|embed| format_haiku_embed(embed_data, embed));
-                //                         msg.content(format!(
-                //                             "Search result {}/{}",
-                //                             new_index + 1,
-                //                             search_results.len()
-                //                         ));
-                //                         msg
-                //                     })
-                //                     .await
-                //                     .expect("Failed to edit search results message");
-                //                 index = new_index;
-                //                 reaction
-                //                     .as_inner_ref()
-                //                     .delete(&ctx.http)
-                //                     .await
-                //                     .expect("Unable to delete reaction");
-                //             }
-                //         } else {
-                //             break;
-                //         }
-                //     }
+                let handler = Box::new(SearchReactionHandler {
+                    search_index,
+                    search_results,
+                });
+                let data = ctx.data.read().await;
+                let handlers = data
+                    .get::<ComponentInteractionHandlers>()
+                    .expect("Expected Handlers in TypeMap");
+                handlers.insert(command.id, handler);
             }
         }
         Ok(())
+    }
+}
+
+pub struct SearchReactionHandler {
+    search_index: usize,
+    search_results: Vec<(i64, Haiku)>,
+}
+
+#[async_trait]
+impl ComponentInteractionHandler for SearchReactionHandler {
+    async fn invoke(
+        &mut self,
+        ctx: &Context,
+        interaction: &MessageComponentInteraction,
+        original_message: &mut Message,
+    ) {
+        let new_index = match interaction.data.custom_id.as_str() {
+            "next" => Some(self.search_index + 1),
+            "previous" => self.search_index.checked_sub(1),
+            _ => None,
+        };
+        if let Some((new_index, (id, haiku))) = new_index
+            .map(|i| self.search_results.get(i).map(|haiku| (i, haiku)))
+            .flatten()
+        {
+            let embed_data = to_embed_data(*id, &haiku, ctx).await;
+            original_message
+                .edit(&ctx.http, |message| {
+                    message
+                        .set_embeds(Vec::new())
+                        .add_embed(|embed| format_haiku_embed(embed_data, embed))
+                        .content(format!(
+                            "Search result {}/{}",
+                            new_index + 1,
+                            self.search_results.len()
+                        ))
+                        .components(|components| {
+                            components.create_action_row(|row| {
+                                row.create_button(|button| {
+                                    button
+                                        .custom_id("previous")
+                                        .label("Previous")
+                                        .style(ButtonStyle::Primary)
+                                        .disabled(new_index < 1)
+                                })
+                                .create_button(|button| {
+                                    button
+                                        .custom_id("next")
+                                        .label("Next")
+                                        .style(ButtonStyle::Primary)
+                                        .disabled(new_index >= self.search_results.len() - 1)
+                                })
+                            })
+                        });
+                    message
+                })
+                .await
+                .expect("Failed to send search results");
+            self.search_index = new_index;
+            interaction
+                .create_interaction_response(&ctx.http, |response| {
+                    response.kind(InteractionResponseType::UpdateMessage)
+                })
+                .await
+                .expect("Failed to respond to component interaction");
+        }
     }
 }
