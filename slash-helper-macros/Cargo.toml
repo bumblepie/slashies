@@ -12,3 +12,13 @@ slash-helper = { path = "../slash-helper" }
 syn = { version = "1.0", features = ["full"] }
 quote = "1.0"
 proc-macro2 = "1.0"
+serenity = { version = "0.10", default-features = false, features = [
+    "cache",
+    "client",
+    "collector",
+    "gateway",
+    "rustls_backend",
+    "model",
+    "unstable_discord_api",
+] }
+itertools = "0.10"

@@ -4,54 +4,23 @@ use crate::{
 };
 use serenity::{
     async_trait,
-    builder::{CreateApplicationCommand, CreateEmbed},
+    builder::CreateEmbed,
     client::Context,
     model::interactions::{
-        application_command::{
-            ApplicationCommandInteraction, ApplicationCommandInteractionDataOptionValue,
-            ApplicationCommandOptionType,
-        },
-        InteractionResponseType,
+        application_command::ApplicationCommandInteraction, InteractionResponseType,
     },
 };
-use slash_helper::{ApplicationCommandInteractionHandler, Command, InvocationError, ParseError};
+use slash_helper::{ApplicationCommandInteractionHandler, Command, InvocationError};
+use slash_helper_macros::Command;
 
+/// Fetch a specific haiku from this server by its id
+#[derive(Command)]
+#[name = "gethaiku"]
 pub struct GetHaikuCommand {
+    /// Id of the haiku to fetch
     id: i64,
 }
 pub const GET_HAIKU_COMMAND_NAME: &'static str = "gethaiku";
-
-impl Command for GetHaikuCommand {
-    fn parse(command: &ApplicationCommandInteraction) -> Result<Self, ParseError> {
-        let id = command
-            .data
-            .options
-            .iter()
-            .find(|option| option.name == "id")
-            .ok_or(ParseError::MissingOption)?
-            .resolved
-            .clone()
-            .ok_or(ParseError::MissingOption)?;
-        if let ApplicationCommandInteractionDataOptionValue::Integer(id) = id {
-            Ok(Self { id })
-        } else {
-            Err(ParseError::InvalidOption)
-        }
-    }
-
-    fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
-        command
-            .name(GET_HAIKU_COMMAND_NAME)
-            .description("Fetch a specific haiku from this server by its id")
-            .create_option(|option| {
-                option
-                    .name("id")
-                    .description("Id of the haiku to fetch")
-                    .kind(ApplicationCommandOptionType::Integer)
-                    .required(true)
-            })
-    }
-}
 
 #[async_trait]
 impl ApplicationCommandInteractionHandler for GetHaikuCommand {

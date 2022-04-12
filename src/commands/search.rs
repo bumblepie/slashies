@@ -6,15 +6,12 @@ use crate::{
 };
 use serenity::{
     async_trait,
-    builder::{CreateApplicationCommand, CreateEmbed},
+    builder::CreateEmbed,
     client::Context,
     model::{
         channel::Message,
         interactions::{
-            application_command::{
-                ApplicationCommandInteraction, ApplicationCommandInteractionDataOptionValue,
-                ApplicationCommandOptionType,
-            },
+            application_command::ApplicationCommandInteraction,
             message_component::{ButtonStyle, MessageComponentInteraction},
             InteractionResponseType,
         },
@@ -22,45 +19,18 @@ use serenity::{
 };
 use slash_helper::{
     ApplicationCommandInteractionHandler, Command, InvocationError,
-    MessageComponentInteractionHandler, ParseError,
+    MessageComponentInteractionHandler,
 };
+use slash_helper_macros::Command;
 
+/// Search for a haiku
+#[derive(Command)]
+#[name = "search"]
 pub struct SearchCommand {
+    /// A set of keywords to search for, separated by spaces
     keywords: String,
 }
 pub const SEARCH_COMMAND_NAME: &'static str = "search";
-
-impl Command for SearchCommand {
-    fn parse(command: &ApplicationCommandInteraction) -> Result<Self, ParseError> {
-        let keywords = command
-            .data
-            .options
-            .iter()
-            .find(|option| option.name == "keywords")
-            .ok_or(ParseError::MissingOption)?
-            .resolved
-            .clone()
-            .ok_or(ParseError::MissingOption)?;
-        if let ApplicationCommandInteractionDataOptionValue::String(keywords) = keywords {
-            Ok(Self { keywords })
-        } else {
-            Err(ParseError::InvalidOption)
-        }
-    }
-
-    fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
-        command
-            .name(SEARCH_COMMAND_NAME)
-            .description("Search for a haiku")
-            .create_option(|option| {
-                option
-                    .name("keywords")
-                    .description("A set of keywords to search for, separated by spaces")
-                    .kind(ApplicationCommandOptionType::String)
-                    .required(true)
-            })
-    }
-}
 
 #[async_trait]
 impl ApplicationCommandInteractionHandler for SearchCommand {

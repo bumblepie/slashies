@@ -3,13 +3,12 @@ use crate::UptimeStart;
 use chrono::Utc;
 use serenity::{
     async_trait,
-    builder::CreateApplicationCommand,
     client::Context,
     model::interactions::{
         application_command::ApplicationCommandInteraction, InteractionResponseType,
     },
 };
-use slash_helper::{ApplicationCommandInteractionHandler, Command, InvocationError, ParseError};
+use slash_helper::{ApplicationCommandInteractionHandler, Command, InvocationError};
 use slash_helper_macros::Command;
 
 /// Show how long since the bot was last restarted

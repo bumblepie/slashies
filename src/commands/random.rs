@@ -4,13 +4,13 @@ use crate::{
 };
 use serenity::{
     async_trait,
-    builder::{CreateApplicationCommand, CreateEmbed},
+    builder::CreateEmbed,
     client::Context,
     model::interactions::{
         application_command::ApplicationCommandInteraction, InteractionResponseType,
     },
 };
-use slash_helper::{ApplicationCommandInteractionHandler, Command, InvocationError, ParseError};
+use slash_helper::{ApplicationCommandInteractionHandler, Command, InvocationError};
 use slash_helper_macros::Command;
 
 /// Fetch a random haiku from this server

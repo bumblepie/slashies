@@ -5,7 +5,10 @@ use serenity::{
     model::{
         channel::Message,
         interactions::{
-            application_command::ApplicationCommandInteraction,
+            application_command::{
+                ApplicationCommandInteraction, ApplicationCommandInteractionDataOption,
+                ApplicationCommandInteractionDataOptionValue, ApplicationCommandOptionType,
+            },
             message_component::MessageComponentInteraction,
         },
     },
@@ -44,6 +47,76 @@ pub trait MessageComponentInteractionHandler {
         interaction: &MessageComponentInteraction,
         original_message: &mut Message,
     );
+}
+
+pub trait ParsableCommandOption: Sized {
+    fn parse_from(
+        option: Option<&ApplicationCommandInteractionDataOption>,
+    ) -> Result<Self, ParseError>;
+
+    fn application_command_option_type() -> ApplicationCommandOptionType;
+    fn is_required() -> bool {
+        true
+    }
+}
+
+impl ParsableCommandOption for i64 {
+    fn parse_from(
+        option: Option<&ApplicationCommandInteractionDataOption>,
+    ) -> Result<Self, ParseError> {
+        match option
+            .ok_or(ParseError::MissingOption)?
+            .resolved
+            .clone()
+            .ok_or(ParseError::MissingOption)?
+        {
+            ApplicationCommandInteractionDataOptionValue::Integer(i) => Ok(i),
+            _ => Err(ParseError::InvalidOption),
+        }
+    }
+
+    fn application_command_option_type() -> ApplicationCommandOptionType {
+        ApplicationCommandOptionType::Integer
+    }
+}
+
+impl ParsableCommandOption for String {
+    fn parse_from(
+        option: Option<&ApplicationCommandInteractionDataOption>,
+    ) -> Result<Self, ParseError> {
+        match option
+            .ok_or(ParseError::MissingOption)?
+            .resolved
+            .clone()
+            .ok_or(ParseError::MissingOption)?
+        {
+            ApplicationCommandInteractionDataOptionValue::String(s) => Ok(s),
+            _ => Err(ParseError::InvalidOption),
+        }
+    }
+
+    fn application_command_option_type() -> ApplicationCommandOptionType {
+        ApplicationCommandOptionType::String
+    }
+}
+
+impl<T: ParsableCommandOption> ParsableCommandOption for Option<T> {
+    fn parse_from(
+        option: Option<&ApplicationCommandInteractionDataOption>,
+    ) -> Result<Self, ParseError> {
+        match option {
+            Some(opt) => Ok(Some(T::parse_from(Some(opt))?)),
+            None => Ok(None),
+        }
+    }
+
+    fn application_command_option_type() -> ApplicationCommandOptionType {
+        T::application_command_option_type()
+    }
+
+    fn is_required() -> bool {
+        false
+    }
 }
 
 #[macro_export]
