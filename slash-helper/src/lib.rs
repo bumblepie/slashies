@@ -51,22 +51,19 @@ pub trait MessageComponentInteractionHandler {
 #[macro_export]
 macro_rules! register_commands {
     ($ctx:expr, $guild_id:expr, [$($cmdType:ty),+]) => {{
-        use serenity::model::interactions::application_command::ApplicationCommand;
-        use slash_helper::Command;
-
         if let Some(guild_id) = $guild_id {
             GuildId::set_application_commands(&guild_id, &$ctx.http, |commands_builder| {
                 commands_builder
                 $(
-                    .create_application_command(|command| <$cmdType>::register(command))
+                    .create_application_command(|command| <$cmdType as slash_helper::Command>::register(command))
                 )*
             })
             .await
         } else {
-            ApplicationCommand::set_global_application_commands(&$ctx.http, |commands_builder| {
+            serenity::model::interactions::application_command::ApplicationCommand::set_global_application_commands(&$ctx.http, |commands_builder| {
                 commands_builder
                 $(
-                    .create_application_command(|command| <$cmdType>::register(command))
+                    .create_application_command(|command| <$cmdType as slash_helper::Command>::register(command))
                 )*
             })
             .await
