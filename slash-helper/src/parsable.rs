@@ -1,4 +1,5 @@
 use serenity::model::{
+    channel::PartialChannel,
     guild::{PartialMember, Role},
     interactions::application_command::{
         ApplicationCommandInteractionDataOption, ApplicationCommandInteractionDataOptionValue,
@@ -19,26 +20,6 @@ pub trait ParsableCommandOption: Sized {
     }
 }
 
-impl ParsableCommandOption for i64 {
-    fn parse_from(
-        option: Option<&ApplicationCommandInteractionDataOption>,
-    ) -> Result<Self, ParseError> {
-        match option
-            .ok_or(ParseError::MissingOption)?
-            .resolved
-            .clone()
-            .ok_or(ParseError::MissingOption)?
-        {
-            ApplicationCommandInteractionDataOptionValue::Integer(i) => Ok(i),
-            _ => Err(ParseError::InvalidOption),
-        }
-    }
-
-    fn application_command_option_type() -> ApplicationCommandOptionType {
-        ApplicationCommandOptionType::Integer
-    }
-}
-
 impl ParsableCommandOption for String {
     fn parse_from(
         option: Option<&ApplicationCommandInteractionDataOption>,
@@ -56,6 +37,26 @@ impl ParsableCommandOption for String {
 
     fn application_command_option_type() -> ApplicationCommandOptionType {
         ApplicationCommandOptionType::String
+    }
+}
+
+impl ParsableCommandOption for i64 {
+    fn parse_from(
+        option: Option<&ApplicationCommandInteractionDataOption>,
+    ) -> Result<Self, ParseError> {
+        match option
+            .ok_or(ParseError::MissingOption)?
+            .resolved
+            .clone()
+            .ok_or(ParseError::MissingOption)?
+        {
+            ApplicationCommandInteractionDataOptionValue::Integer(i) => Ok(i),
+            _ => Err(ParseError::InvalidOption),
+        }
+    }
+
+    fn application_command_option_type() -> ApplicationCommandOptionType {
+        ApplicationCommandOptionType::Integer
     }
 }
 
@@ -96,6 +97,26 @@ impl ParsableCommandOption for (User, Option<PartialMember>) {
 
     fn application_command_option_type() -> ApplicationCommandOptionType {
         ApplicationCommandOptionType::User
+    }
+}
+
+impl ParsableCommandOption for PartialChannel {
+    fn parse_from(
+        option: Option<&ApplicationCommandInteractionDataOption>,
+    ) -> Result<Self, ParseError> {
+        match option
+            .ok_or(ParseError::MissingOption)?
+            .resolved
+            .clone()
+            .ok_or(ParseError::MissingOption)?
+        {
+            ApplicationCommandInteractionDataOptionValue::Channel(c) => Ok(c),
+            _ => Err(ParseError::InvalidOption),
+        }
+    }
+
+    fn application_command_option_type() -> ApplicationCommandOptionType {
+        ApplicationCommandOptionType::Channel
     }
 }
 

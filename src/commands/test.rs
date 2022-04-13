@@ -2,6 +2,7 @@ use serenity::{
     async_trait,
     client::Context,
     model::{
+        channel::PartialChannel,
         guild::{PartialMember, Role},
         interactions::{
             application_command::ApplicationCommandInteraction, InteractionResponseType,
@@ -46,6 +47,10 @@ pub struct TestCommand {
     mentionable_opt: Mentionable,
     /// a non-required role option
     maybe_mentionable_opt: Option<Mentionable>,
+    /// a channel option
+    channel_opt: PartialChannel,
+    /// a non-required role option
+    maybe_channel_opt: Option<PartialChannel>,
 }
 pub const TEST_COMMAND_NAME: &'static str = "test";
 
