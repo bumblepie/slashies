@@ -39,20 +39,20 @@ fn option_token_sections_from_field(field: &Field) -> OptionTokenSections {
     let field_type = field.ty.to_token_stream();
     OptionTokenSections {
         parse_fetch: quote! {
-            let #field_ident = <#field_type as slash_helper::ParsableCommandOption>::parse_from(options.get(#option_name))?;
+            let #field_ident = <#field_type as slash_helper::parsable::ParsableCommandOption>::parse_from(options.get(#option_name))?;
         },
         parse_struct_item: quote! {
             #field_ident,
         },
         is_required: quote! {
-            <#field_type as slash_helper::ParsableCommandOption>::is_required()
+            <#field_type as slash_helper::parsable::ParsableCommandOption>::is_required()
         },
         registration_fn: quote! {
             |option: &mut serenity::builder::CreateApplicationCommandOption| option
-                .kind(<#field_type as slash_helper::ParsableCommandOption>::application_command_option_type())
+                .kind(<#field_type as slash_helper::parsable::ParsableCommandOption>::application_command_option_type())
                 .name(#option_name)
                 .description(#description)
-                .required(<#field_type as slash_helper::ParsableCommandOption>::is_required())
+                .required(<#field_type as slash_helper::parsable::ParsableCommandOption>::is_required())
         },
     }
 }
