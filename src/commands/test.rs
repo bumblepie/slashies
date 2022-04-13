@@ -1,11 +1,15 @@
 use serenity::{
     async_trait,
     client::Context,
-    model::interactions::{
-        application_command::ApplicationCommandInteraction, InteractionResponseType,
+    model::{
+        guild::{PartialMember, Role},
+        interactions::{
+            application_command::ApplicationCommandInteraction, InteractionResponseType,
+        },
+        prelude::User,
     },
 };
-use slash_helper::{ApplicationCommandInteractionHandler, Command, InvocationError};
+use slash_helper::{ApplicationCommandInteractionHandler, Command, InvocationError, Mentionable};
 use slash_helper_macros::Command;
 
 /// A test command for checking the macros are working
@@ -27,7 +31,19 @@ pub struct TestCommand {
     /// a number option
     num_opt: f64,
     /// a non-required num option
-    maybenum_opt: Option<f64>,
+    maybe_num_opt: Option<f64>,
+    /// a user option
+    user_opt: (User, Option<PartialMember>),
+    /// a non-required user option
+    maybe_user_opt: Option<(User, Option<PartialMember>)>,
+    /// a role option
+    role_opt: Role,
+    /// a non-required role option
+    maybe_role_opt: Option<Role>,
+    /// a mentionable option
+    mentionable_opt: Mentionable,
+    /// a non-required role option
+    maybe_mentionable_opt: Option<Mentionable>,
 }
 pub const TEST_COMMAND_NAME: &'static str = "test";
 

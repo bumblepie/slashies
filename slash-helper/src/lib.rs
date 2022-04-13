@@ -4,6 +4,7 @@ use serenity::{
     client::Context,
     model::{
         channel::Message,
+        guild::{PartialMember, Role},
         interactions::{
             application_command::{
                 ApplicationCommandInteraction, ApplicationCommandInteractionDataOption,
@@ -11,17 +12,18 @@ use serenity::{
             },
             message_component::MessageComponentInteraction,
         },
+        prelude::User,
     },
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ParseError {
     MissingOption,
     InvalidOption,
     UnknownCommand,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct InvocationError;
 
 // To be derivable via macro
@@ -119,6 +121,73 @@ impl ParsableCommandOption for bool {
         ApplicationCommandOptionType::Boolean
     }
 }
+
+impl ParsableCommandOption for (User, Option<PartialMember>) {
+    fn parse_from(
+        option: Option<&ApplicationCommandInteractionDataOption>,
+    ) -> Result<Self, ParseError> {
+        match option
+            .ok_or(ParseError::MissingOption)?
+            .resolved
+            .clone()
+            .ok_or(ParseError::MissingOption)?
+        {
+            ApplicationCommandInteractionDataOptionValue::User(u, pm) => Ok((u, pm)),
+            _ => Err(ParseError::InvalidOption),
+        }
+    }
+
+    fn application_command_option_type() -> ApplicationCommandOptionType {
+        ApplicationCommandOptionType::User
+    }
+}
+
+impl ParsableCommandOption for Role {
+    fn parse_from(
+        option: Option<&ApplicationCommandInteractionDataOption>,
+    ) -> Result<Self, ParseError> {
+        match option
+            .ok_or(ParseError::MissingOption)?
+            .resolved
+            .clone()
+            .ok_or(ParseError::MissingOption)?
+        {
+            ApplicationCommandInteractionDataOptionValue::Role(r) => Ok(r),
+            _ => Err(ParseError::InvalidOption),
+        }
+    }
+
+    fn application_command_option_type() -> ApplicationCommandOptionType {
+        ApplicationCommandOptionType::Role
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum Mentionable {
+    Role(Role),
+    User(User, Option<PartialMember>),
+}
+impl ParsableCommandOption for Mentionable {
+    fn parse_from(
+        option: Option<&ApplicationCommandInteractionDataOption>,
+    ) -> Result<Self, ParseError> {
+        match option
+            .ok_or(ParseError::MissingOption)?
+            .resolved
+            .clone()
+            .ok_or(ParseError::MissingOption)?
+        {
+            ApplicationCommandInteractionDataOptionValue::Role(r) => Ok(Self::Role(r)),
+            ApplicationCommandInteractionDataOptionValue::User(u, pm) => Ok(Self::User(u, pm)),
+            _ => Err(ParseError::InvalidOption),
+        }
+    }
+
+    fn application_command_option_type() -> ApplicationCommandOptionType {
+        ApplicationCommandOptionType::Mentionable
+    }
+}
+
 impl ParsableCommandOption for f64 {
     fn parse_from(
         option: Option<&ApplicationCommandInteractionDataOption>,
@@ -138,6 +207,9 @@ impl ParsableCommandOption for f64 {
         ApplicationCommandOptionType::Number
     }
 }
+
+//TODO impl ParsableCommandOption for attachmentobject {
+
 impl<T: ParsableCommandOption> ParsableCommandOption for Option<T> {
     fn parse_from(
         option: Option<&ApplicationCommandInteractionDataOption>,
@@ -156,6 +228,8 @@ impl<T: ParsableCommandOption> ParsableCommandOption for Option<T> {
         false
     }
 }
+
+//TODO: impl<T: ParsableCommandOption> ParsableCommandOption for Vec<T> {}
 
 #[macro_export]
 macro_rules! register_commands {
