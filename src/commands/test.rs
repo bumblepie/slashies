@@ -14,12 +14,20 @@ use slash_helper_macros::Command;
 pub struct TestCommand {
     /// a string option
     string_opt: String,
-    /// an int option
-    int_opt: i64,
     /// a non-required string option
     maybe_string_opt: Option<String>,
+    /// an int option
+    int_opt: i64,
     /// a non-required int option
     maybe_int_opt: Option<i64>,
+    /// a bool option
+    bool_opt: bool,
+    /// a non-required bool option
+    maybe_bool_opt: Option<bool>,
+    /// a number option
+    num_opt: f64,
+    /// a non-required num option
+    maybenum_opt: Option<f64>,
 }
 pub const TEST_COMMAND_NAME: &'static str = "test";
 

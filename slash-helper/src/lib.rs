@@ -100,6 +100,44 @@ impl ParsableCommandOption for String {
     }
 }
 
+impl ParsableCommandOption for bool {
+    fn parse_from(
+        option: Option<&ApplicationCommandInteractionDataOption>,
+    ) -> Result<Self, ParseError> {
+        match option
+            .ok_or(ParseError::MissingOption)?
+            .resolved
+            .clone()
+            .ok_or(ParseError::MissingOption)?
+        {
+            ApplicationCommandInteractionDataOptionValue::Boolean(b) => Ok(b),
+            _ => Err(ParseError::InvalidOption),
+        }
+    }
+
+    fn application_command_option_type() -> ApplicationCommandOptionType {
+        ApplicationCommandOptionType::Boolean
+    }
+}
+impl ParsableCommandOption for f64 {
+    fn parse_from(
+        option: Option<&ApplicationCommandInteractionDataOption>,
+    ) -> Result<Self, ParseError> {
+        match option
+            .ok_or(ParseError::MissingOption)?
+            .resolved
+            .clone()
+            .ok_or(ParseError::MissingOption)?
+        {
+            ApplicationCommandInteractionDataOptionValue::Number(n) => Ok(n),
+            _ => Err(ParseError::InvalidOption),
+        }
+    }
+
+    fn application_command_option_type() -> ApplicationCommandOptionType {
+        ApplicationCommandOptionType::Number
+    }
+}
 impl<T: ParsableCommandOption> ParsableCommandOption for Option<T> {
     fn parse_from(
         option: Option<&ApplicationCommandInteractionDataOption>,
