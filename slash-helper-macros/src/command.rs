@@ -94,7 +94,7 @@ pub fn impl_command_for_struct(
         .multiunzip();
 
     let output = quote! {
-        impl Command for #identifier {
+        impl slash_helper::Command for #identifier {
             fn parse(command: &serenity::model::interactions::application_command::ApplicationCommandInteraction) -> Result<Self, slash_helper::ParseError> {
                 let options: std::collections::HashMap<String, serenity::model::interactions::application_command::ApplicationCommandInteractionDataOption> = command.data
                     .options
@@ -230,7 +230,7 @@ pub fn impl_command_for_enum(
         .multiunzip();
 
     let output = quote! {
-        impl Command for #identifier {
+        impl slash_helper::Command for #identifier {
             fn parse(command: &serenity::model::interactions::application_command::ApplicationCommandInteraction) -> Result<Self, slash_helper::ParseError> {
                 let options: std::collections::HashMap<String, serenity::model::interactions::application_command::ApplicationCommandInteractionDataOption> = command.data
                     .options

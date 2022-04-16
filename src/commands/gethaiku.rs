@@ -10,7 +10,7 @@ use serenity::{
         application_command::ApplicationCommandInteraction, InteractionResponseType,
     },
 };
-use slash_helper::{ApplicationCommandInteractionHandler, Command, InvocationError};
+use slash_helper::{ApplicationCommandInteractionHandler, InvocationError};
 use slash_helper_macros::Command;
 
 /// Fetch a specific haiku from this server by its id

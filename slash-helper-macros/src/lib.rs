@@ -42,13 +42,13 @@ pub fn derive_commmand(input: TokenStream) -> TokenStream {
             impl_command_for_struct(ident, name, description, options_for_struct_data(data))
         }
         syn::Data::Enum(ref data) => {
-            impl_command_for_enum(ident, name, description, sub_commands_for_enum(data))
+            impl_command_for_enum(ident, name, description, subcommands_for_enum(data))
         }
         _ => panic!("Can only derive Command for structs"),
     }
 }
 
-#[proc_macro_derive(SubCommand, attributes(name, option_type))]
+#[proc_macro_derive(SubCommand, attributes(name))]
 pub fn derive_subcommmand(input: TokenStream) -> TokenStream {
     let DeriveInput {
         ident, data, ..

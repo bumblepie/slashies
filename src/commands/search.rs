@@ -18,8 +18,7 @@ use serenity::{
     },
 };
 use slash_helper::{
-    ApplicationCommandInteractionHandler, Command, InvocationError,
-    MessageComponentInteractionHandler,
+    ApplicationCommandInteractionHandler, InvocationError, MessageComponentInteractionHandler,
 };
 use slash_helper_macros::Command;
 

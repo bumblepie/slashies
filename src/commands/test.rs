@@ -10,9 +10,7 @@ use serenity::{
         prelude::User,
     },
 };
-use slash_helper::{
-    parsable::Mentionable, ApplicationCommandInteractionHandler, Command, InvocationError,
-};
+use slash_helper::{parsable::Mentionable, ApplicationCommandInteractionHandler, InvocationError};
 use slash_helper_macros::Command;
 
 /// A test command for checking the macros are working

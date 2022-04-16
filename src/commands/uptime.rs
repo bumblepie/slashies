@@ -8,7 +8,7 @@ use serenity::{
         application_command::ApplicationCommandInteraction, InteractionResponseType,
     },
 };
-use slash_helper::{ApplicationCommandInteractionHandler, Command, InvocationError};
+use slash_helper::{ApplicationCommandInteractionHandler, InvocationError};
 use slash_helper_macros::Command;
 
 /// Show how long since the bot was last restarted

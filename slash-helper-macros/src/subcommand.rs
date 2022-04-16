@@ -28,7 +28,7 @@ pub fn impl_subcommand_for_struct(
         .multiunzip();
     
     let output = quote!{
-        impl SubCommand for #identifier {
+        impl slash_helper::SubCommand for #identifier {
             fn parse(
                 option: Option<&serenity::model::interactions::application_command::ApplicationCommandInteractionDataOption>,
             ) -> Result<Self, slash_helper::ParseError> {

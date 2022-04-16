@@ -10,10 +10,7 @@ use serenity::{
         prelude::User,
     },
 };
-use slash_helper::{
-    parsable::Mentionable, ApplicationCommandInteractionHandler, Command, InvocationError,
-    SubCommand,
-};
+use slash_helper::{parsable::Mentionable, ApplicationCommandInteractionHandler, InvocationError};
 use slash_helper_macros::{Command, SubCommand};
 
 /// Sub commmand test
