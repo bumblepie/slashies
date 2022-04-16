@@ -16,6 +16,7 @@ use slash_helper::{
 use slash_helper_macros::Command;
 
 /// A test command for checking the macros are working
+#[allow(dead_code)]
 #[derive(Command, Debug)]
 #[name = "test"]
 pub struct TestCommand {

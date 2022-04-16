@@ -54,6 +54,7 @@ impl ApplicationCommandInteractionHandler for TestSubCommands {
 #[derive(Debug, SubCommand)]
 pub struct TestSubCommandUnit;
 
+#[allow(dead_code)]
 #[derive(Debug, SubCommand)]
 pub struct TestSubCommandFields {
     /// a string option
