@@ -1,12 +1,20 @@
 use serenity::{
     async_trait,
     client::Context,
-    model::interactions::{
-        application_command::ApplicationCommandInteraction, InteractionResponseType,
+    model::{
+        channel::PartialChannel,
+        guild::{PartialMember, Role},
+        interactions::{
+            application_command::ApplicationCommandInteraction, InteractionResponseType,
+        },
+        prelude::User,
     },
 };
-use slash_helper::{ApplicationCommandInteractionHandler, Command, InvocationError, SubCommand};
-use slash_helper_macros::Command;
+use slash_helper::{
+    parsable::Mentionable, ApplicationCommandInteractionHandler, Command, InvocationError,
+    SubCommand,
+};
+use slash_helper_macros::{Command, SubCommand};
 
 /// Sub commmand test
 #[derive(Debug, Command)]
@@ -43,53 +51,41 @@ impl ApplicationCommandInteractionHandler for TestSubCommands {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, SubCommand)]
 pub struct TestSubCommandUnit;
 
-impl SubCommand for TestSubCommandUnit {
-    fn parse(
-        _option: Option<&serenity::model::interactions::application_command::ApplicationCommandInteractionDataOption>,
-    ) -> Result<Self, slash_helper::ParseError> {
-        Ok(Self {})
-    }
-
-    fn register_sub_options(
-        option: &mut serenity::builder::CreateApplicationCommandOption,
-    ) -> &mut serenity::builder::CreateApplicationCommandOption {
-        option
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, SubCommand)]
 pub struct TestSubCommandFields {
-    /// an int option on a sub command
-    sub_cmd_int: i64,
-}
-
-impl SubCommand for TestSubCommandFields {
-    fn parse(
-        option: Option<&serenity::model::interactions::application_command::ApplicationCommandInteractionDataOption>,
-    ) -> Result<Self, slash_helper::ParseError> {
-        let options: std::collections::HashMap<String, serenity::model::interactions::application_command::ApplicationCommandInteractionDataOption> = option
-            .ok_or(slash_helper::ParseError::MissingOption)?
-            .options
-            .iter()
-            .map(|option| (option.name.clone(), option.clone()))
-            .collect();
-        let sub_cmd_int = <i64 as slash_helper::parsable::ParsableCommandOption>::parse_from(
-            options.get("sub_cmd_int"),
-        )?;
-        Ok(Self { sub_cmd_int })
-    }
-
-    fn register_sub_options(
-        option: &mut serenity::builder::CreateApplicationCommandOption,
-    ) -> &mut serenity::builder::CreateApplicationCommandOption {
-        option
-        .create_sub_option(|sub_option| {
-            sub_option.kind(serenity::model::interactions::application_command::ApplicationCommandOptionType::Integer)
-                .name("sub_cmd_int")
-                .description("an int option on a sub command")
-        })
-    }
+    /// a string option
+    string_opt: String,
+    /// a non-required string option
+    maybe_string_opt: Option<String>,
+    /// an int option
+    int_opt: i64,
+    /// a non-required int option
+    maybe_int_opt: Option<i64>,
+    /// a bool option
+    bool_opt: bool,
+    /// a non-required bool option
+    maybe_bool_opt: Option<bool>,
+    /// a number option
+    num_opt: f64,
+    /// a non-required num option
+    maybe_num_opt: Option<f64>,
+    /// a user option
+    user_opt: (User, Option<PartialMember>),
+    /// a non-required user option
+    maybe_user_opt: Option<(User, Option<PartialMember>)>,
+    /// a role option
+    role_opt: Role,
+    /// a non-required role option
+    maybe_role_opt: Option<Role>,
+    /// a mentionable option
+    mentionable_opt: Mentionable,
+    /// a non-required role option
+    maybe_mentionable_opt: Option<Mentionable>,
+    /// a channel option
+    channel_opt: PartialChannel,
+    /// a non-required role option
+    maybe_channel_opt: Option<PartialChannel>,
 }
