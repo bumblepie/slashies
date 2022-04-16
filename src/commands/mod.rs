@@ -4,6 +4,7 @@ use self::{
     random::{RandomHaikuCommand, RANDOM_HAIKU_COMMAND_NAME},
     search::{SearchCommand, SEARCH_COMMAND_NAME},
     test::{TestCommand, TEST_COMMAND_NAME},
+    test_sub::{TestSubCommands, TEST_SUB_COMMAND_NAME},
     uptime::{UptimeCommand, UPTIME_COMMAND_NAME},
 };
 use serenity::{
@@ -16,6 +17,7 @@ pub mod gethaiku;
 pub mod random;
 pub mod search;
 pub mod test;
+pub mod test_sub;
 pub mod uptime;
 
 pub enum Commands {
@@ -25,6 +27,7 @@ pub enum Commands {
     RandomHaiku(RandomHaikuCommand),
     Search(SearchCommand),
     Test(TestCommand),
+    TestSub(TestSubCommands),
 }
 
 // To be derived via macro
@@ -40,6 +43,7 @@ impl Commands {
             RANDOM_HAIKU_COMMAND_NAME => Ok(Self::RandomHaiku(RandomHaikuCommand::parse(command)?)),
             SEARCH_COMMAND_NAME => Ok(Self::Search(SearchCommand::parse(command)?)),
             TEST_COMMAND_NAME => Ok(Self::Test(TestCommand::parse(command)?)),
+            TEST_SUB_COMMAND_NAME => Ok(Self::TestSub(TestSubCommands::parse(command)?)),
             _ => Err(ParseError::UnknownCommand),
         }
     }
@@ -56,6 +60,7 @@ impl Commands {
             Self::RandomHaiku(command) => command.invoke(ctx, command_interaction).await,
             Self::Search(command) => command.invoke(ctx, command_interaction).await,
             Self::Test(command) => command.invoke(ctx, command_interaction).await,
+            Self::TestSub(command) => command.invoke(ctx, command_interaction).await,
         }
     }
 }

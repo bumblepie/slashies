@@ -1,11 +1,13 @@
 use serenity::{
     async_trait,
-    builder::CreateApplicationCommand,
+    builder::{CreateApplicationCommand, CreateApplicationCommandOption},
     client::Context,
     model::{
         channel::Message,
         interactions::{
-            application_command::ApplicationCommandInteraction,
+            application_command::{
+                ApplicationCommandInteraction, ApplicationCommandInteractionDataOption,
+            },
             message_component::MessageComponentInteraction,
         },
     },
@@ -23,10 +25,16 @@ pub enum ParseError {
 #[derive(Debug, Clone)]
 pub struct InvocationError;
 
-// To be derivable via macro
 pub trait Command: ApplicationCommandInteractionHandler + Sized {
     fn parse(command: &ApplicationCommandInteraction) -> Result<Self, ParseError>;
     fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand;
+}
+
+pub trait SubCommand: Sized {
+    fn parse(option: Option<&ApplicationCommandInteractionDataOption>) -> Result<Self, ParseError>;
+    fn register_sub_options(
+        option: &mut CreateApplicationCommandOption,
+    ) -> &mut CreateApplicationCommandOption;
 }
 
 #[async_trait]

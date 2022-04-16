@@ -11,7 +11,8 @@ pub mod schema;
 use chrono::{DateTime, Utc};
 use commands::{
     count::CountCommand, gethaiku::GetHaikuCommand, random::RandomHaikuCommand,
-    search::SearchCommand, uptime::UptimeCommand, Commands,
+    search::SearchCommand, test::TestCommand, test_sub::TestSubCommands, uptime::UptimeCommand,
+    Commands,
 };
 use counting::{is_haiku, is_haiku_single};
 use dashmap::DashMap;
@@ -29,8 +30,6 @@ use serenity::{
 use slash_helper::{register_commands, MessageComponentInteractionHandler};
 use std::env;
 use std::{collections::HashMap, sync::Arc};
-
-use crate::commands::test::TestCommand;
 
 struct HaikuTracker;
 impl TypeMapKey for HaikuTracker {
@@ -187,7 +186,8 @@ impl EventHandler for Handler {
                 GetHaikuCommand,
                 RandomHaikuCommand,
                 SearchCommand,
-                TestCommand
+                TestCommand,
+                TestSubCommands
             ]
         )
         .expect("Unable to register commands");

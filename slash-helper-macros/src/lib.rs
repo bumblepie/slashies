@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use proc_macro::{self, TokenStream};
 use quote::{quote, ToTokens};
-use syn::{parse_macro_input, DeriveInput, Field, Lit, Meta};
+use syn::{parse_macro_input, DataEnum, DataStruct, DeriveInput, Field, Ident, Lit, Meta, Variant};
 
 /// For each command option, we need four sections of code:
 /// - parse_fetch: Parse the field from a discord command interaction option into a variable
@@ -57,46 +57,24 @@ fn option_token_sections_from_field(field: &Field) -> OptionTokenSections {
     }
 }
 
-#[proc_macro_derive(Command, attributes(name, option_type))]
-pub fn derive_commmand(input: TokenStream) -> TokenStream {
-    let DeriveInput {
-        ident, data, attrs, ..
-    } = parse_macro_input!(input);
-    let options: Vec<OptionTokenSections> = if let syn::Data::Struct(data) = data {
-        if let syn::Fields::Named(_) = data.fields {
-            data.fields
-                .into_iter()
-                .map(|field| option_token_sections_from_field(&field))
-                .collect()
-        } else if syn::Fields::Unit == data.fields {
-            Vec::new()
-        } else {
-            panic!("Can only derive Command for unit structs or structs with named fields");
-        }
-    } else {
-        panic!("Can only derive Command for structs");
-    };
+fn options_for_struct_data(data: &DataStruct) -> Vec<OptionTokenSections> {
+    match data.fields {
+        syn::Fields::Named(_) => data
+            .fields
+            .iter()
+            .map(|field| option_token_sections_from_field(field))
+            .collect(),
+        syn::Fields::Unit => Vec::new(),
+        _ => panic!("Can only derive Command for unit structs or structs with named fields"),
+    }
+}
 
-    let name_meta = attrs
-        .iter()
-        .find(|attr| attr.path.is_ident("name"))
-        .expect("Command must specify a name via the \"name\" attribute")
-        .parse_meta()
-        .expect("Invalid \"name\" attribute");
-    let name = match name_meta {
-        Meta::NameValue(value) => value.lit,
-        _ => panic!("Invalid \"name\" attribute"),
-    };
-    let doc_meta = attrs
-        .iter()
-        .find(|attr| attr.path.is_ident("doc"))
-        .expect("Command must specify a description via a docstring")
-        .parse_meta()
-        .expect("Invalid docstring");
-    let description = match doc_meta {
-        Meta::NameValue(value) => value.lit,
-        _ => panic!("Invalid description docstring"),
-    };
+fn impl_command_for_struct(
+    identifier: Ident,
+    name: Lit,
+    description: Lit,
+    options: Vec<OptionTokenSections>,
+) -> TokenStream {
     let (parse_fetch, parse_struct_item, is_required, registration_fn): (
         Vec<_>,
         Vec<_>,
@@ -116,7 +94,7 @@ pub fn derive_commmand(input: TokenStream) -> TokenStream {
         .multiunzip();
 
     let output = quote! {
-        impl Command for #ident {
+        impl Command for #identifier {
             fn parse(command: &serenity::model::interactions::application_command::ApplicationCommandInteraction) -> Result<Self, slash_helper::ParseError> {
                 let options: std::collections::HashMap<String, serenity::model::interactions::application_command::ApplicationCommandInteractionDataOption> = command.data
                     .options
@@ -154,4 +132,159 @@ pub fn derive_commmand(input: TokenStream) -> TokenStream {
         }
     };
     output.into()
+}
+
+#[derive(Debug)]
+struct SubCommandTokenSections {
+    parse_fetch: proc_macro2::TokenStream,
+    variant_identifier: proc_macro2::Ident,
+    registration_fn: proc_macro2::TokenStream,
+}
+
+fn subcommand_token_sections_from_enum_variant(variant: &Variant) -> SubCommandTokenSections {
+    match variant.fields {
+        syn::Fields::Unnamed(ref fields) => {
+            let fields = &fields.unnamed;
+            if fields.len() != 1 {
+                panic!("Variants of a Command enum must be a tuple of length 1, containing only the subcommand");
+            }
+            let field = &fields[0];
+            let variant_identifier = &variant.ident;
+            let name_meta = variant
+                .attrs
+                .iter()
+                .find(|attr| attr.path.is_ident("name"))
+                .expect("Subcommand must specify a name via the \"name\" attribute")
+                .parse_meta()
+                .expect("Invalid \"name\" attribute");
+            let subcommand_name = match name_meta {
+                Meta::NameValue(value) => value.lit,
+                _ => panic!("Invalid \"name\" attribute"),
+            };
+            let doc_meta = variant
+                .attrs
+                .iter()
+                .find(|attr| attr.path.is_ident("doc"))
+                .expect("Subcommands must specify a description via a docstring")
+                .parse_meta()
+                .expect("Invalid docstring");
+            let description = match doc_meta {
+                Meta::NameValue(ref value) => match value.lit {
+                    Lit::Str(ref description) => description.value(),
+                    _ => panic!("Invalid description docstring"),
+                },
+                _ => panic!("Invalid description docstring"),
+            };
+            let field_type = field.ty.to_token_stream();
+            SubCommandTokenSections {
+                parse_fetch: quote! {
+                    match options.get(#subcommand_name) {
+                        Some(option) => Some(<#field_type as slash_helper::SubCommand>::parse(Some(option))?),
+                        None => None,
+                    }
+                },
+                variant_identifier: variant_identifier.clone(),
+                registration_fn: quote! {
+                    |option: &mut serenity::builder::CreateApplicationCommandOption| {
+                        let option = option
+                            .kind(serenity::model::interactions::application_command::ApplicationCommandOptionType::SubCommand)
+                            .name(#subcommand_name)
+                            .description(#description)
+                            .required(false);
+                        <#field_type as slash_helper::SubCommand>::register_sub_options(option)
+                    }
+                },
+            }
+        }
+        _ => panic!("Can only derive Command for enums with unnamed tuple variants"),
+    }
+}
+
+fn sub_commands_for_enum(data: &DataEnum) -> Vec<SubCommandTokenSections> {
+    data.variants
+        .iter()
+        .map(|variant| subcommand_token_sections_from_enum_variant(variant))
+        .collect()
+}
+
+fn impl_command_for_enum(
+    identifier: Ident,
+    name: Lit,
+    description: Lit,
+    sub_commands: Vec<SubCommandTokenSections>,
+) -> TokenStream {
+    let (parse_fetch, variant_identifier, registration_fn): (Vec<_>, Vec<_>, Vec<_>) = sub_commands
+        .into_iter()
+        .map(|sub_command| {
+            let SubCommandTokenSections {
+                parse_fetch,
+                variant_identifier,
+                registration_fn,
+            } = sub_command;
+            (parse_fetch, variant_identifier, registration_fn)
+        })
+        .multiunzip();
+
+    let output = quote! {
+        impl Command for #identifier {
+            fn parse(command: &serenity::model::interactions::application_command::ApplicationCommandInteraction) -> Result<Self, slash_helper::ParseError> {
+                let options: std::collections::HashMap<String, serenity::model::interactions::application_command::ApplicationCommandInteractionDataOption> = command.data
+                    .options
+                    .iter()
+                    .map(|option| (option.name.clone(), option.clone()))
+                    .collect();
+
+                #(if let Some(value) = #parse_fetch {
+                    return Ok(Self::#variant_identifier(value));
+                })*
+                Err(slash_helper::ParseError::MissingOption)
+            }
+
+            fn register(command: &mut serenity::builder::CreateApplicationCommand) -> &mut serenity::builder::CreateApplicationCommand {
+                command
+                    .name(#name)
+                    .description(#description)
+                    #(.create_option(#registration_fn))*
+            }
+        }
+    };
+    output.into()
+}
+
+#[proc_macro_derive(Command, attributes(name))]
+pub fn derive_commmand(input: TokenStream) -> TokenStream {
+    let DeriveInput {
+        ident, data, attrs, ..
+    } = parse_macro_input!(input);
+
+    let name_meta = attrs
+        .iter()
+        .find(|attr| attr.path.is_ident("name"))
+        .expect("Command must specify a name via the \"name\" attribute")
+        .parse_meta()
+        .expect("Invalid \"name\" attribute");
+    let name = match name_meta {
+        Meta::NameValue(value) => value.lit,
+        _ => panic!("Invalid \"name\" attribute"),
+    };
+    let doc_meta = attrs
+        .iter()
+        .find(|attr| attr.path.is_ident("doc"))
+        .expect("Command must specify a description via a docstring")
+        .parse_meta()
+        .expect("Invalid docstring");
+    let description = match doc_meta {
+        Meta::NameValue(value) => value.lit,
+        _ => panic!("Invalid description docstring"),
+    };
+
+    match data {
+        syn::Data::Struct(ref data) => {
+            impl_command_for_struct(ident, name, description, options_for_struct_data(data))
+        }
+        syn::Data::Enum(ref data) => {
+            impl_command_for_enum(ident, name, description, sub_commands_for_enum(data))
+        }
+        _ => panic!("Can only derive Command for structs"),
+    }
 }
