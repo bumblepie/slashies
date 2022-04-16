@@ -53,7 +53,6 @@ pub struct TestCommand {
     /// a non-required role option
     maybe_channel_opt: Option<PartialChannel>,
 }
-pub const TEST_COMMAND_NAME: &'static str = "test";
 
 #[async_trait]
 impl ApplicationCommandInteractionHandler for TestCommand {

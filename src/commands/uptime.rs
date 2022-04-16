@@ -15,7 +15,6 @@ use slash_helper_macros::Command;
 #[derive(Command)]
 #[name = "uptime"]
 pub struct UptimeCommand;
-pub const UPTIME_COMMAND_NAME: &'static str = "uptime";
 
 #[async_trait]
 impl ApplicationCommandInteractionHandler for UptimeCommand {

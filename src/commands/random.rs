@@ -17,7 +17,6 @@ use slash_helper_macros::Command;
 #[derive(Command)]
 #[name = "randomhaiku"]
 pub struct RandomHaikuCommand;
-pub const RANDOM_HAIKU_COMMAND_NAME: &'static str = "randomhaiku";
 
 #[async_trait]
 impl ApplicationCommandInteractionHandler for RandomHaikuCommand {

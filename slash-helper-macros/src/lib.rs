@@ -109,6 +109,10 @@ fn impl_command_for_struct(
                 })
             }
 
+            fn name() -> String {
+                #name.to_owned()
+            }
+
             fn register(command: &mut serenity::builder::CreateApplicationCommand) -> &mut serenity::builder::CreateApplicationCommand {
                 // Ensure required options are added first
                 let mut options: Vec<(bool, Box<dyn Fn(&mut serenity::builder::CreateApplicationCommandOption) -> &mut serenity::builder::CreateApplicationCommandOption>)> = vec![
@@ -240,6 +244,10 @@ fn impl_command_for_enum(
                 Err(slash_helper::ParseError::MissingOption)
             }
 
+            fn name() -> String {
+                #name.to_owned()
+            }
+
             fn register(command: &mut serenity::builder::CreateApplicationCommand) -> &mut serenity::builder::CreateApplicationCommand {
                 command
                     .name(#name)
@@ -366,4 +374,68 @@ pub fn derive_subcommmand(input: TokenStream) -> TokenStream {
         }
         _ => panic!("Can only derive SubCommand for structs"),
     }
+}
+
+struct CommandsVariantInfo {
+    variant_identifier: Ident,
+    field_type: proc_macro2::TokenStream,
+}
+
+fn get_commands_variant_info(variant: &Variant) -> CommandsVariantInfo {
+    match variant.fields {
+        syn::Fields::Unnamed(ref fields) => {
+            let fields = &fields.unnamed;
+            if fields.len() != 1 {
+                panic!("Variants of a Command enum must be a tuple of length 1, containing only the subcommand");
+            }
+            let field = &fields[0];
+            let variant_identifier = variant.ident.clone();
+            let field_type = field.ty.to_token_stream();
+            CommandsVariantInfo {
+                variant_identifier,
+                field_type,
+            }
+        }
+        _ => panic!("Can only derive Command for enums with unnamed tuple variants"),
+    }
+}
+
+#[proc_macro_derive(Commands)]
+pub fn derive_commands(input: TokenStream) -> TokenStream {
+    let DeriveInput {
+        data, ..
+    } = parse_macro_input!(input);
+
+    let (variant_identifier, field_type): (Vec<Ident>, Vec<proc_macro2::TokenStream>) = match data {
+        syn::Data::Enum(ref data) => {
+            data.variants.iter()
+                .map(|variant| get_commands_variant_info(variant))
+                .map(|variant_info| (variant_info.variant_identifier, variant_info.field_type))
+                .multiunzip()
+        }
+        _ => panic!("Can only derive Commands for enums"),
+    };
+    quote!{
+        impl Commands {
+            pub fn parse(
+                _ctx: &Context,
+                command: &ApplicationCommandInteraction,
+            ) -> Result<Self, ParseError> {
+                match command.data.name.as_ref() {
+                    #(name if name == <#field_type as slash_helper::Command>::name() => Ok(Self::#variant_identifier(<#field_type as slash_helper::Command>::parse(command)?)),)*
+                    _ => Err(ParseError::UnknownCommand),
+                }
+            }
+        
+            pub async fn invoke(
+                &self,
+                ctx: &Context,
+                command_interaction: &ApplicationCommandInteraction,
+            ) -> Result<(), InvocationError> {
+                match self {
+                    #(Self::#variant_identifier(command) => command.invoke(ctx, command_interaction).await,)*
+                }
+            }
+        }
+    }.into()
 }

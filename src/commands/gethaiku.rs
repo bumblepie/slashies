@@ -20,7 +20,6 @@ pub struct GetHaikuCommand {
     /// Id of the haiku to fetch
     id: i64,
 }
-pub const GET_HAIKU_COMMAND_NAME: &'static str = "gethaiku";
 
 #[async_trait]
 impl ApplicationCommandInteractionHandler for GetHaikuCommand {

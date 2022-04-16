@@ -27,7 +27,6 @@ pub enum TestSubCommands {
     /// Sub command with options
     Fields(TestSubCommandFields),
 }
-pub const TEST_SUB_COMMAND_NAME: &'static str = "test_sub";
 
 #[async_trait]
 impl ApplicationCommandInteractionHandler for TestSubCommands {

@@ -16,7 +16,6 @@ pub struct CountCommand {
     /// The phrase to count
     phrase: String,
 }
-pub const COUNT_COMMAND_NAME: &'static str = "count";
 
 #[async_trait]
 impl ApplicationCommandInteractionHandler for CountCommand {

@@ -30,7 +30,6 @@ pub struct SearchCommand {
     /// A set of keywords to search for, separated by spaces
     keywords: String,
 }
-pub const SEARCH_COMMAND_NAME: &'static str = "search";
 
 #[async_trait]
 impl ApplicationCommandInteractionHandler for SearchCommand {

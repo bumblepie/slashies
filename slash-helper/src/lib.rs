@@ -28,6 +28,7 @@ pub struct InvocationError;
 pub trait Command: ApplicationCommandInteractionHandler + Sized {
     fn parse(command: &ApplicationCommandInteraction) -> Result<Self, ParseError>;
     fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand;
+    fn name() -> String;
 }
 
 pub trait SubCommand: Sized {
@@ -54,6 +55,17 @@ pub trait MessageComponentInteractionHandler {
         interaction: &MessageComponentInteraction,
         original_message: &mut Message,
     );
+}
+
+#[async_trait]
+pub trait Commands: Sized {
+    fn parse(_ctx: &Context, command: &ApplicationCommandInteraction) -> Result<Self, ParseError>;
+
+    async fn invoke(
+        &self,
+        ctx: &Context,
+        command_interaction: &ApplicationCommandInteraction,
+    ) -> Result<(), InvocationError>;
 }
 
 #[macro_export]
