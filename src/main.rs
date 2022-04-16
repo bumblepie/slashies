@@ -31,6 +31,8 @@ use slash_helper::{register_commands, MessageComponentInteractionHandler};
 use std::env;
 use std::{collections::HashMap, sync::Arc};
 
+use crate::commands::test_sub_groups::TestSubCommandGroups;
+
 struct HaikuTracker;
 impl TypeMapKey for HaikuTracker {
     type Value = Arc<RwLock<HashMap<ChannelId, [Option<HaikuLine>; 3]>>>;
@@ -187,7 +189,8 @@ impl EventHandler for Handler {
                 RandomHaikuCommand,
                 SearchCommand,
                 TestCommand,
-                TestSubCommands
+                TestSubCommands,
+                TestSubCommandGroups
             ]
         )
         .expect("Unable to register commands");

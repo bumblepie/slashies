@@ -1,16 +1,18 @@
-use command::{impl_command_for_struct, impl_command_for_enum, options_for_struct_data, sub_commands_for_enum};
+use command::{impl_command_for_struct, impl_command_for_enum, options_for_struct_data, subcommands_for_enum};
 use commands::get_commands_variant_info;
 use itertools::Itertools;
 use proc_macro::{self, TokenStream};
 use quote::{quote};
 use subcommand::impl_subcommand_for_struct;
+use subcommandgroup::impl_subcommandgroup_for_enum;
 use syn::{parse_macro_input, DeriveInput, Ident, Meta};
 
 mod command;
 mod commands;
 mod subcommand;
+mod subcommandgroup;
 
-#[proc_macro_derive(Command, attributes(name))]
+#[proc_macro_derive(Command, attributes(name, subcommandgroup))]
 pub fn derive_commmand(input: TokenStream) -> TokenStream {
     let DeriveInput {
         ident, data, attrs, ..
@@ -59,6 +61,20 @@ pub fn derive_subcommmand(input: TokenStream) -> TokenStream {
             impl_subcommand_for_struct(ident, options_for_struct_data(data))
         }
         _ => panic!("Can only derive SubCommand for structs"),
+    }
+}
+
+#[proc_macro_derive(SubCommandGroup, attributes(name))]
+pub fn derive_subcommmandgroup(input: TokenStream) -> TokenStream {
+    let DeriveInput {
+        ident, data, ..
+    } = parse_macro_input!(input);
+
+    match data {
+        syn::Data::Enum(ref data) => {
+            impl_subcommandgroup_for_enum(ident, subcommands_for_enum(data))
+        }
+        _ => panic!("Can only derive SubCommandGroup for enums"),
     }
 }
 

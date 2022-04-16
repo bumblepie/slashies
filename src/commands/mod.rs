@@ -1,6 +1,7 @@
 use self::{
     count::CountCommand, gethaiku::GetHaikuCommand, random::RandomHaikuCommand,
-    search::SearchCommand, test::TestCommand, test_sub::TestSubCommands, uptime::UptimeCommand,
+    search::SearchCommand, test::TestCommand, test_sub::TestSubCommands,
+    test_sub_groups::TestSubCommandGroups, uptime::UptimeCommand,
 };
 use serenity::{
     client::Context, model::interactions::application_command::ApplicationCommandInteraction,
@@ -14,6 +15,7 @@ pub mod random;
 pub mod search;
 pub mod test;
 pub mod test_sub;
+pub mod test_sub_groups;
 pub mod uptime;
 
 #[derive(Commands)]
@@ -25,4 +27,5 @@ pub enum Commands {
     Search(SearchCommand),
     Test(TestCommand),
     TestSub(TestSubCommands),
+    TestSubGroups(TestSubCommandGroups),
 }

@@ -38,6 +38,13 @@ pub trait SubCommand: Sized {
     ) -> &mut CreateApplicationCommandOption;
 }
 
+pub trait SubCommandGroup: Sized {
+    fn parse(option: Option<&ApplicationCommandInteractionDataOption>) -> Result<Self, ParseError>;
+    fn register_sub_options(
+        option: &mut CreateApplicationCommandOption,
+    ) -> &mut CreateApplicationCommandOption;
+}
+
 #[async_trait]
 pub trait ApplicationCommandInteractionHandler {
     async fn invoke(

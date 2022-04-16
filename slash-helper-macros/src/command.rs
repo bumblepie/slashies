@@ -140,12 +140,12 @@ pub fn impl_command_for_struct(
 
 #[derive(Debug)]
 pub struct SubCommandTokenSections {
-    parse_fetch: proc_macro2::TokenStream,
-    variant_identifier: proc_macro2::Ident,
-    registration_fn: proc_macro2::TokenStream,
+    pub parse_fetch: proc_macro2::TokenStream,
+    pub variant_identifier: proc_macro2::Ident,
+    pub registration_fn: proc_macro2::TokenStream,
 }
 
-fn subcommand_token_sections_from_enum_variant(variant: &Variant) -> SubCommandTokenSections {
+pub fn subcommand_token_sections_from_enum_variant(variant: &Variant) -> SubCommandTokenSections {
     match variant.fields {
         syn::Fields::Unnamed(ref fields) => {
             let fields = &fields.unnamed;
@@ -180,31 +180,58 @@ fn subcommand_token_sections_from_enum_variant(variant: &Variant) -> SubCommandT
                 _ => panic!("Invalid description docstring"),
             };
             let field_type = field.ty.to_token_stream();
-            SubCommandTokenSections {
-                parse_fetch: quote! {
-                    match options.get(#subcommand_name) {
-                        Some(option) => Some(<#field_type as slash_helper::SubCommand>::parse(Some(option))?),
-                        None => None,
-                    }
-                },
-                variant_identifier: variant_identifier.clone(),
-                registration_fn: quote! {
-                    |option: &mut serenity::builder::CreateApplicationCommandOption| {
-                        let option = option
-                            .kind(serenity::model::interactions::application_command::ApplicationCommandOptionType::SubCommand)
-                            .name(#subcommand_name)
-                            .description(#description)
-                            .required(false);
-                        <#field_type as slash_helper::SubCommand>::register_sub_options(option)
-                    }
-                },
+            if variant
+                .attrs
+                .iter()
+                .find(|attr| attr.path.is_ident("subcommandgroup"))
+                .is_some()
+            {
+                SubCommandTokenSections {
+                    parse_fetch: quote! {
+                        match options.get(#subcommand_name) {
+                            Some(option) => Some(<#field_type as slash_helper::SubCommandGroup>::parse(Some(option))?),
+                            None => None,
+                        }
+                    },
+                    variant_identifier: variant_identifier.clone(),
+                    registration_fn: quote! {
+                        |option: &mut serenity::builder::CreateApplicationCommandOption| {
+                            let option = option
+                                .kind(serenity::model::interactions::application_command::ApplicationCommandOptionType::SubCommandGroup)
+                                .name(#subcommand_name)
+                                .description(#description)
+                                .required(false);
+                            <#field_type as slash_helper::SubCommandGroup>::register_sub_options(option)
+                        }
+                    },
+                }
+            } else {
+                SubCommandTokenSections {
+                    parse_fetch: quote! {
+                        match options.get(#subcommand_name) {
+                            Some(option) => Some(<#field_type as slash_helper::SubCommand>::parse(Some(option))?),
+                            None => None,
+                        }
+                    },
+                    variant_identifier: variant_identifier.clone(),
+                    registration_fn: quote! {
+                        |option: &mut serenity::builder::CreateApplicationCommandOption| {
+                            let option = option
+                                .kind(serenity::model::interactions::application_command::ApplicationCommandOptionType::SubCommand)
+                                .name(#subcommand_name)
+                                .description(#description)
+                                .required(false);
+                            <#field_type as slash_helper::SubCommand>::register_sub_options(option)
+                        }
+                    },
+                }
             }
         }
         _ => panic!("Can only derive Command for enums with unnamed tuple variants"),
     }
 }
 
-pub fn sub_commands_for_enum(data: &DataEnum) -> Vec<SubCommandTokenSections> {
+pub fn subcommands_for_enum(data: &DataEnum) -> Vec<SubCommandTokenSections> {
     data.variants
         .iter()
         .map(|variant| subcommand_token_sections_from_enum_variant(variant))
