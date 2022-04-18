@@ -1,2 +1,0 @@
-[workspace]
-members = ["slash-helper", "slash-helper-macros"]

@@ -1,0 +1,2 @@
+[workspace]
+members = ["slash-helper", "slash-helper-macros", "examples/e01_hello_world"]

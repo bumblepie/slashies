@@ -98,10 +98,10 @@ pub fn derive_commands(input: TokenStream) -> TokenStream {
             pub fn parse(
                 _ctx: &Context,
                 command: &ApplicationCommandInteraction,
-            ) -> Result<Self, ParseError> {
+            ) -> Result<Self, slash_helper::ParseError> {
                 match command.data.name.as_ref() {
                     #(name if name == <#field_type as slash_helper::Command>::name() => Ok(Self::#variant_identifier(<#field_type as slash_helper::Command>::parse(command)?)),)*
-                    _ => Err(ParseError::UnknownCommand),
+                    _ => Err(slash_helper::ParseError::UnknownCommand),
                 }
             }
         
