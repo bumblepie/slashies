@@ -54,6 +54,7 @@ pub fn derive_commmand(input: TokenStream) -> TokenStream {
     }
 }
 
+#[proc_macro_error]
 #[proc_macro_derive(SubCommand, attributes(name))]
 pub fn derive_subcommmand(input: TokenStream) -> TokenStream {
     let DeriveInput {
@@ -64,10 +65,11 @@ pub fn derive_subcommmand(input: TokenStream) -> TokenStream {
         syn::Data::Struct(ref data) => {
             impl_subcommand_for_struct(ident, options_for_struct_data(data))
         }
-        _ => panic!("Can only derive SubCommand for structs"),
+        _ => abort!(ident, "Can only derive SubCommand for structs"),
     }
 }
 
+#[proc_macro_error]
 #[proc_macro_derive(SubCommandGroup, attributes(name))]
 pub fn derive_subcommmandgroup(input: TokenStream) -> TokenStream {
     let DeriveInput {
@@ -78,7 +80,7 @@ pub fn derive_subcommmandgroup(input: TokenStream) -> TokenStream {
         syn::Data::Enum(ref data) => {
             impl_subcommandgroup_for_enum(ident, subcommands_for_enum(data))
         }
-        _ => panic!("Can only derive SubCommandGroup for enums"),
+        _ => abort!(ident, "Can only derive SubCommandGroup for enums"),
     }
 }
 
