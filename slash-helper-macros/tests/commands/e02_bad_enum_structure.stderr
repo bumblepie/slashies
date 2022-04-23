@@ -1,0 +1,17 @@
+error: Variants of a Commands enum must have exactly one unnamed field
+ --> tests/commands/e02_bad_enum_structure.rs:5:5
+  |
+5 |     HasNamedFields { named_field: u64 },
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: Variants of a Commands enum must have exactly one unnamed field
+  --> tests/commands/e02_bad_enum_structure.rs:10:5
+   |
+10 |     HasNoFields,
+   |     ^^^^^^^^^^^
+
+error: Variants of a Commands enum must have exactly one unnamed field
+  --> tests/commands/e02_bad_enum_structure.rs:15:5
+   |
+15 |     HasMultipleUnnamedFields(u64, u64),
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

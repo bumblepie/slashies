@@ -1,0 +1,5 @@
+error: Can only derive Commands for enums
+ --> tests/commands/e01_not_an_enum.rs:4:8
+  |
+4 | struct BadCommands {}
+  |        ^^^^^^^^^^^

@@ -1,3 +1,4 @@
+use proc_macro_error::abort;
 use quote::ToTokens;
 use syn::{Ident, Variant};
 
@@ -11,7 +12,10 @@ pub fn get_commands_variant_info(variant: &Variant) -> CommandsVariantInfo {
         syn::Fields::Unnamed(ref fields) => {
             let fields = &fields.unnamed;
             if fields.len() != 1 {
-                panic!("Variants of a Command enum must be a tuple of length 1, containing only the subcommand");
+                abort!(
+                    variant,
+                    "Variants of a Commands enum must have exactly one unnamed field"
+                );
             }
             let field = &fields[0];
             let variant_identifier = variant.ident.clone();
@@ -21,6 +25,18 @@ pub fn get_commands_variant_info(variant: &Variant) -> CommandsVariantInfo {
                 field_type,
             }
         }
-        _ => panic!("Can only derive Command for enums with unnamed tuple variants"),
+        _ => abort!(
+            variant,
+            "Variants of a Commands enum must have exactly one unnamed field"
+        ),
+    }
+}
+
+#[cfg(test)]
+mod test {
+    #[test]
+    fn examples_fail_with_correct_error() {
+        let t = trybuild::TestCases::new();
+        t.compile_fail("tests/commands/*.rs");
     }
 }

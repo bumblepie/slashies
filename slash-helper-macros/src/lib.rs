@@ -82,10 +82,11 @@ pub fn derive_subcommmandgroup(input: TokenStream) -> TokenStream {
     }
 }
 
+#[proc_macro_error]
 #[proc_macro_derive(Commands)]
 pub fn derive_commands(input: TokenStream) -> TokenStream {
     let DeriveInput {
-        data, ..
+        ident, data, ..
     } = parse_macro_input!(input);
 
     let (variant_identifier, field_type): (Vec<Ident>, Vec<proc_macro2::TokenStream>) = match data {
@@ -95,7 +96,7 @@ pub fn derive_commands(input: TokenStream) -> TokenStream {
                 .map(|variant_info| (variant_info.variant_identifier, variant_info.field_type))
                 .multiunzip()
         }
-        _ => panic!("Can only derive Commands for enums"),
+        _ => abort!(ident, "Can only derive Commands for enums"),
     };
     quote!{
         impl Commands {
