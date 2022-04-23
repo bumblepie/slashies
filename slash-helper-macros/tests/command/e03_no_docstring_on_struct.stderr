@@ -1,0 +1,5 @@
+error: Command must specify a description via a docstring
+ --> tests/command/e03_no_docstring_on_struct.rs:7:8
+  |
+7 | struct BadCommand;
+  |        ^^^^^^^^^^

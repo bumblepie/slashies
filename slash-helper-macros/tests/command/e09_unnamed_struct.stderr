@@ -1,0 +1,5 @@
+error: Command must specify a name via the "name" attribute
+ --> tests/command/e09_unnamed_struct.rs:5:8
+  |
+5 | struct BadCommand;
+  |        ^^^^^^^^^^

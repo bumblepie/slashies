@@ -1,0 +1,17 @@
+error: Subcommand variants for a Command enum must have unnamed fields
+ --> tests/command/e08_invalid_command_enum.rs:7:5
+  |
+7 |     SubCommand { named: u64, fields: u64 },
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: Variants of a Command enum must be a tuple of length 1, containing only the subcommand
+  --> tests/command/e08_invalid_command_enum.rs:14:16
+   |
+14 |     SubCommand(u64, u64),
+   |                ^^^^^^^^
+
+error: Subcommand variants for a Command enum must have unnamed fields
+  --> tests/command/e08_invalid_command_enum.rs:21:5
+   |
+21 |     SubCommand,
+   |     ^^^^^^^^^^

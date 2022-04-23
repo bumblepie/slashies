@@ -1,0 +1,5 @@
+error: Subcommand must specify a name via the "name" attribute
+ --> tests/command/e06_unnamed_sub_command.rs:7:5
+  |
+7 |     Sub(SubCommand),
+  |     ^^^^^^^^^^^^^^^

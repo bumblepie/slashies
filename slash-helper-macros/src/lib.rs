@@ -2,6 +2,7 @@ use command::{impl_command_for_struct, impl_command_for_enum, options_for_struct
 use commands::get_commands_variant_info;
 use itertools::Itertools;
 use proc_macro::{self, TokenStream};
+use proc_macro_error::{proc_macro_error, abort};
 use quote::{quote};
 use subcommand::impl_subcommand_for_struct;
 use subcommandgroup::impl_subcommandgroup_for_enum;
@@ -12,31 +13,34 @@ mod commands;
 mod subcommand;
 mod subcommandgroup;
 
+#[proc_macro_error]
 #[proc_macro_derive(Command, attributes(name, subcommandgroup))]
 pub fn derive_commmand(input: TokenStream) -> TokenStream {
     let DeriveInput {
         ident, data, attrs, ..
     } = parse_macro_input!(input);
 
-    let name_meta = attrs
+    let name_attr = attrs
         .iter()
         .find(|attr| attr.path.is_ident("name"))
-        .expect("Command must specify a name via the \"name\" attribute")
+        .unwrap_or_else(|| abort!(ident, "Command must specify a name via the \"name\" attribute"));
+    let name_meta = name_attr
         .parse_meta()
-        .expect("Invalid \"name\" attribute");
+        .unwrap_or_else(|_| abort!(name_attr, "Invalid \"name\" attribute"));
     let name = match name_meta {
         Meta::NameValue(value) => value.lit,
-        _ => panic!("Invalid \"name\" attribute"),
+        _ => abort!(name_attr, "Invalid \"name\" attribute"),
     };
-    let doc_meta = attrs
+    let doc_attr = attrs
         .iter()
         .find(|attr| attr.path.is_ident("doc"))
-        .expect("Command must specify a description via a docstring")
+        .unwrap_or_else(|| abort!(ident, "Command must specify a description via a docstring"));
+    let doc_meta = doc_attr
         .parse_meta()
-        .expect("Invalid docstring");
+        .unwrap_or_else(|_| abort!(doc_attr, "Invalid docstring"));
     let description = match doc_meta {
         Meta::NameValue(value) => value.lit,
-        _ => panic!("Invalid description docstring"),
+        _ => abort!(doc_attr, "Invalid description docstring"),
     };
 
     match data {
@@ -46,7 +50,7 @@ pub fn derive_commmand(input: TokenStream) -> TokenStream {
         syn::Data::Enum(ref data) => {
             impl_command_for_enum(ident, name, description, subcommands_for_enum(data))
         }
-        _ => panic!("Can only derive Command for structs"),
+        _ => abort!(ident, "Can only derive Command for structs (regular commands) or enums (commands with subcommands)"),
     }
 }
 

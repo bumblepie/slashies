@@ -1,0 +1,5 @@
+error: Can only derive Command for structs (regular commands) or enums (commands with subcommands)
+ --> tests/command/e10_not_a_struct_or_enum.rs:6:7
+  |
+6 | union BadCommand {
+  |       ^^^^^^^^^^

@@ -1,0 +1,5 @@
+error: Can only derive Command for unit structs or structs with named fields
+ --> tests/command/e05_struct_with_unnamed_fields.rs:6:18
+  |
+6 | struct BadCommand(u64, u64);
+  |                  ^^^^^^^^^^

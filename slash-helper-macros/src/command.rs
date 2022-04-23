@@ -1,5 +1,6 @@
 use itertools::Itertools;
 use proc_macro::TokenStream;
+use proc_macro_error::abort;
 use quote::{quote, ToTokens};
 use syn::{DataEnum, DataStruct, Field, Ident, Lit, Meta, Variant};
 
@@ -17,24 +18,32 @@ pub struct OptionTokenSections {
 }
 
 fn option_token_sections_from_field(field: &Field) -> OptionTokenSections {
-    let field_ident = field
-        .ident
-        .as_ref()
-        .expect("Unnamed struct fields are not supported");
+    let field_ident = field.ident.as_ref().unwrap_or_else(|| {
+        abort!(
+            field.ty,
+            "Unnamed struct fields are not supported for commands",
+        );
+    });
     let option_name = field_ident.to_string();
-    let doc_meta = field
+    let doc_attr = field
         .attrs
         .iter()
         .find(|attr| attr.path.is_ident("doc"))
-        .expect("Command options must specify a description via a docstring")
-        .parse_meta()
-        .expect("Invalid docstring");
+        .unwrap_or_else(|| {
+            abort!(
+                field_ident,
+                "Command options must specify a description via a docstring",
+            );
+        });
+    let doc_meta = doc_attr.parse_meta().unwrap_or_else(|_| {
+        abort!(doc_attr, "Invalid docstring",);
+    });
     let description = match doc_meta {
         Meta::NameValue(ref value) => match value.lit {
             Lit::Str(ref description) => description.value(),
-            _ => panic!("Invalid description docstring"),
+            _ => abort!(doc_attr, "Invalid docstring",),
         },
-        _ => panic!("Invalid description docstring"),
+        _ => abort!(doc_attr, "Invalid docstring",),
     };
     let field_type = field.ty.to_token_stream();
     OptionTokenSections {
@@ -65,7 +74,10 @@ pub fn options_for_struct_data(data: &DataStruct) -> Vec<OptionTokenSections> {
             .map(|field| option_token_sections_from_field(field))
             .collect(),
         syn::Fields::Unit => Vec::new(),
-        _ => panic!("Can only derive Command for unit structs or structs with named fields"),
+        _ => abort!(
+            data.fields,
+            "Can only derive Command for unit structs or structs with named fields"
+        ),
     }
 }
 
@@ -150,34 +162,46 @@ pub fn subcommand_token_sections_from_enum_variant(variant: &Variant) -> SubComm
         syn::Fields::Unnamed(ref fields) => {
             let fields = &fields.unnamed;
             if fields.len() != 1 {
-                panic!("Variants of a Command enum must be a tuple of length 1, containing only the subcommand");
+                abort!(fields, "Variants of a Command enum must be a tuple of length 1, containing only the subcommand");
             }
             let field = &fields[0];
             let variant_identifier = &variant.ident;
-            let name_meta = variant
+            let name_attr = variant
                 .attrs
                 .iter()
                 .find(|attr| attr.path.is_ident("name"))
-                .expect("Subcommand must specify a name via the \"name\" attribute")
+                .unwrap_or_else(|| {
+                    abort!(
+                        variant,
+                        "Subcommand must specify a name via the \"name\" attribute",
+                    );
+                });
+            let name_meta = name_attr
                 .parse_meta()
-                .expect("Invalid \"name\" attribute");
+                .unwrap_or_else(|_| abort!(name_attr, "Invalid \"name\" attribute"));
             let subcommand_name = match name_meta {
                 Meta::NameValue(value) => value.lit,
-                _ => panic!("Invalid \"name\" attribute"),
+                _ => abort!(name_attr, "Invalid \"name\" attribute"),
             };
-            let doc_meta = variant
+            let doc_attr = variant
                 .attrs
                 .iter()
                 .find(|attr| attr.path.is_ident("doc"))
-                .expect("Subcommands must specify a description via a docstring")
+                .unwrap_or_else(|| {
+                    abort!(
+                        variant,
+                        "Subcommands must specify a description via a docstring"
+                    )
+                });
+            let doc_meta = doc_attr
                 .parse_meta()
-                .expect("Invalid docstring");
+                .unwrap_or_else(|_| abort!(doc_attr, "Invalid docstring"));
             let description = match doc_meta {
                 Meta::NameValue(ref value) => match value.lit {
                     Lit::Str(ref description) => description.value(),
-                    _ => panic!("Invalid description docstring"),
+                    _ => abort!(doc_attr, "Invalid description docstring"),
                 },
-                _ => panic!("Invalid description docstring"),
+                _ => abort!(doc_attr, "Invalid description docstring"),
             };
             let field_type = field.ty.to_token_stream();
             if variant
@@ -227,7 +251,10 @@ pub fn subcommand_token_sections_from_enum_variant(variant: &Variant) -> SubComm
                 }
             }
         }
-        _ => panic!("Can only derive Command for enums with unnamed tuple variants"),
+        _ => abort!(
+            variant,
+            "Subcommand variants for a Command enum must have unnamed fields"
+        ),
     }
 }
 
@@ -284,4 +311,13 @@ pub fn impl_command_for_enum(
         }
     };
     output.into()
+}
+
+#[cfg(test)]
+mod test {
+    #[test]
+    fn examples_fail_with_correct_error() {
+        let t = trybuild::TestCases::new();
+        t.compile_fail("tests/command/*.rs");
+    }
 }

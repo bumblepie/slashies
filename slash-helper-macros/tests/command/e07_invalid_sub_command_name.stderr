@@ -1,0 +1,5 @@
+error: Invalid "name" attribute
+  --> tests/command/e07_invalid_sub_command_name.rs:10:5
+   |
+10 |     #[name]
+   |     ^^^^^^^
