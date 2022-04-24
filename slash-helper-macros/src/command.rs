@@ -2,7 +2,7 @@ use itertools::Itertools;
 use proc_macro::TokenStream;
 use proc_macro_error::abort;
 use quote::{quote, ToTokens};
-use syn::{DataEnum, DataStruct, Field, Ident, Lit, Meta, Variant};
+use syn::{Attribute, DataEnum, DataStruct, Field, Ident, Lit, Meta, NestedMeta, Variant};
 
 /// For each command option, we need four sections of code:
 /// - parse_fetch: Parse the field from a discord command interaction option into a variable
@@ -25,6 +25,7 @@ fn option_token_sections_from_field(field: &Field) -> OptionTokenSections {
         );
     });
     let option_name = field_ident.to_string();
+
     let doc_attr = field
         .attrs
         .iter()
@@ -35,6 +36,7 @@ fn option_token_sections_from_field(field: &Field) -> OptionTokenSections {
                 "Command options must specify a description via a docstring",
             );
         });
+
     let doc_meta = doc_attr.parse_meta().unwrap_or_else(|_| {
         abort!(doc_attr, "Invalid docstring",);
     });
@@ -45,6 +47,8 @@ fn option_token_sections_from_field(field: &Field) -> OptionTokenSections {
         },
         _ => abort!(doc_attr, "Invalid docstring",),
     };
+    let choices = get_choices(field.attrs.iter());
+
     let field_type = field.ty.to_token_stream();
     OptionTokenSections {
         parse_fetch: quote! {
@@ -62,6 +66,7 @@ fn option_token_sections_from_field(field: &Field) -> OptionTokenSections {
                 .name(#option_name)
                 .description(#description)
                 .required(<#field_type as slash_helper::parsable::ParsableCommandOption>::is_required())
+                #(#choices)*
         },
     }
 }
@@ -311,6 +316,43 @@ pub fn impl_command_for_enum(
         }
     };
     output.into()
+}
+
+fn get_choices<'a>(attrs: impl Iterator<Item = &'a Attribute>) -> Vec<proc_macro2::TokenStream> {
+    attrs
+        .filter(|attr| attr.path.is_ident("choice"))
+        .map(|attr| match attr.parse_meta() {
+            Ok(meta) => (attr, meta),
+            _ => abort!(attr, "Invalid \"choice\" attribute"),
+        })
+        .map(|(attr, meta)| match meta {
+            Meta::List(list) => {
+                let list = list.nested;
+                let (name_meta, value_meta) = match list.len() {
+                    1 => (&list[0], &list[0]),
+                    2 => (&list[0], &list[1]),
+                    _ => abort!(attr, "Invalid \"choices\" attribute. Attribute must be of the form choice(name, value) or choice(value)"),
+                };
+                let name = match name_meta {
+                    NestedMeta::Lit(lit) => lit,
+                    _ => abort!(attr, "Invalid \"choices\" attribute"),
+                };
+                match value_meta {
+                    NestedMeta::Lit(Lit::Str(ref lit_str)) => quote! {
+                        .add_string_choice(#name, #lit_str)
+                    },
+                    NestedMeta::Lit(Lit::Int(ref lit_int)) => quote! {
+                        .add_int_choice(#name, #lit_int)
+                    },
+                    NestedMeta::Lit(Lit::Float(ref lit_num)) => quote! {
+                        .add_number_choice(#name, #lit_num)
+                    },
+                    _ => abort!(attr, "Invalid \"choices\" attribute - can only have string, integer or number choices"),
+                }
+            }
+            _ => abort!(attr, "Invalid \"choices\" attribute. Attribute must be of the form choice(name, value) or choice(value)"),
+        })
+        .collect::<Vec<_>>()
 }
 
 #[cfg(test)]

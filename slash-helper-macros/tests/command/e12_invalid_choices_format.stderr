@@ -1,0 +1,5 @@
+error: Invalid "choices" attribute. Attribute must be of the form choice(name, value) or choice(value)
+ --> tests/command/e12_invalid_choices_format.rs:8:5
+  |
+8 |     #[choice]
+  |     ^^^^^^^^^

@@ -1,0 +1,5 @@
+error: Invalid "choices" attribute - can only have string, integer or number choices
+ --> tests/command/e14_invalid_choices_types.rs:8:5
+  |
+8 |     #[choice("z", true)]
+  |     ^^^^^^^^^^^^^^^^^^^^
