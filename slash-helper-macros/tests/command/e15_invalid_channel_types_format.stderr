@@ -1,0 +1,5 @@
+error: Invalid "channel_type" attribute. Attribute must be of the form channel_type(type1, type2...)
+ --> tests/command/e15_invalid_channel_types_format.rs:9:5
+  |
+9 |     #[channel_types]
+  |     ^^^^^^^^^^^^^^^^

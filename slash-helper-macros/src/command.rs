@@ -1,7 +1,10 @@
+use std::collections::HashMap;
+
 use itertools::Itertools;
 use proc_macro::TokenStream;
 use proc_macro_error::abort;
 use quote::{quote, ToTokens};
+use serenity::model::channel::ChannelType;
 use syn::{Attribute, DataStruct, Field, Ident, Lit, Meta, NestedMeta};
 
 /// For each command option, we need four sections of code:
@@ -47,7 +50,8 @@ fn option_token_sections_from_field(field: &Field) -> OptionTokenSections {
         },
         _ => abort!(doc_attr, "Invalid docstring",),
     };
-    let choices = get_choices(field.attrs.iter());
+    let choices = get_choices(field.attrs.as_slice());
+    let channel_types = get_channel_types(field.attrs.as_slice());
 
     let field_type = field.ty.to_token_stream();
     OptionTokenSections {
@@ -67,6 +71,7 @@ fn option_token_sections_from_field(field: &Field) -> OptionTokenSections {
                 .description(#description)
                 .required(<#field_type as slash_helper::parsable::ParsableCommandOption>::is_required())
                 #(#choices)*
+                #channel_types
         },
     }
 }
@@ -155,8 +160,9 @@ pub fn impl_command_for_struct(
     output.into()
 }
 
-fn get_choices<'a>(attrs: impl Iterator<Item = &'a Attribute>) -> Vec<proc_macro2::TokenStream> {
+fn get_choices(attrs: &[Attribute]) -> Vec<proc_macro2::TokenStream> {
     attrs
+        .iter()
         .filter(|attr| attr.path.is_ident("choice"))
         .map(|attr| match attr.parse_meta() {
             Ok(meta) => (attr, meta),
@@ -190,6 +196,74 @@ fn get_choices<'a>(attrs: impl Iterator<Item = &'a Attribute>) -> Vec<proc_macro
             _ => abort!(attr, "Invalid \"choices\" attribute. Attribute must be of the form choice(name, value) or choice(value)"),
         })
         .collect::<Vec<_>>()
+}
+
+fn channel_type_from_string(name: &str) -> Option<proc_macro2::TokenStream> {
+    let all_types = HashMap::from([
+        (
+            ChannelType::Text.name(),
+            quote! { serenity::model::channel::ChannelType::Text },
+        ),
+        (
+            ChannelType::Private.name(),
+            quote! { serenity::model::channel::ChannelType::Private },
+        ),
+        (
+            ChannelType::Voice.name(),
+            quote! { serenity::model::channel::ChannelType::Voice },
+        ),
+        (
+            ChannelType::Category.name(),
+            quote! { serenity::model::channel::ChannelType::Category },
+        ),
+        (
+            ChannelType::News.name(),
+            quote! { serenity::model::channel::ChannelType::News },
+        ),
+        (
+            ChannelType::NewsThread.name(),
+            quote! { serenity::model::channel::ChannelType::NewsThread },
+        ),
+        (
+            ChannelType::PublicThread.name(),
+            quote! { serenity::model::channel::ChannelType::PublicThread },
+        ),
+        (
+            ChannelType::PrivateThread.name(),
+            quote! { serenity::model::channel::ChannelType::PrivateThread },
+        ),
+        (
+            ChannelType::Stage.name(),
+            quote! { serenity::model::channel::ChannelType::Stage },
+        ),
+        (
+            ChannelType::Unknown.name(),
+            quote! { serenity::model::channel::ChannelType::Unknown },
+        ),
+    ]);
+    all_types.get(name).map(|tokens| tokens.clone())
+}
+
+fn get_channel_types(attrs: &[Attribute]) -> Option<proc_macro2::TokenStream> {
+    attrs.iter().find(|attr| attr.path.is_ident("channel_types"))
+        .map(|attr| match attr.parse_meta() {
+            Ok(meta) => (attr, meta),
+            _ => abort!(attr, "Invalid \"channel_type\" attribute"),
+        })
+        .map(|(attr, meta)| match meta {
+            Meta::List(list) => {
+                list.nested.iter().map(|nested| match nested {
+                    NestedMeta::Lit(Lit::Str(ref value)) => {
+                        channel_type_from_string(&value.value()).unwrap_or_else(|| abort!(nested, "Invalid channel type"))
+                    },
+                    _ => abort!(nested, "Invalid channel type"),
+                }).collect()
+            },
+            _ => abort!(attr, "Invalid \"channel_type\" attribute. Attribute must be of the form channel_type(type1, type2...)"),
+        }
+    ).map(|channel_types: Vec<_>| {
+        quote! { .channel_types(&[#(#channel_types,)*]) }
+    })
 }
 
 #[cfg(test)]

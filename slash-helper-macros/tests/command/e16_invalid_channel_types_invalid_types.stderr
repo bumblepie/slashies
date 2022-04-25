@@ -1,0 +1,5 @@
+error: Invalid channel type
+ --> tests/command/e16_invalid_channel_types_invalid_types.rs:9:21
+  |
+9 |     #[channel_types("telegram", "telepathy")]
+  |                     ^^^^^^^^^^
