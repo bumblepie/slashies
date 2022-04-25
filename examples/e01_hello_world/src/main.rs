@@ -10,6 +10,7 @@ use serenity::{
         },
         prelude::{Ready, User},
     },
+    prelude::GatewayIntents,
     Client,
 };
 use slash_helper::{register_commands, ApplicationCommandInteractionHandler, InvocationError};
@@ -102,7 +103,7 @@ async fn main() {
         .expect("Expected a user id in the environment")
         .parse::<u64>()
         .expect("Invalid user id");
-    let mut client = Client::builder(&token)
+    let mut client = Client::builder(&token, GatewayIntents::empty())
         // .framework(framework)
         .event_handler(Handler)
         .application_id(application_id)

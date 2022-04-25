@@ -237,6 +237,14 @@ fn channel_type_from_string(name: &str) -> Option<proc_macro2::TokenStream> {
             quote! { serenity::model::channel::ChannelType::Stage },
         ),
         (
+            ChannelType::Directory.name(),
+            quote! { serenity::model::channel::ChannelType::Directory },
+        ),
+        (
+            ChannelType::Forum.name(),
+            quote! { serenity::model::channel::ChannelType::Forum },
+        ),
+        (
             ChannelType::Unknown.name(),
             quote! { serenity::model::channel::ChannelType::Unknown },
         ),
