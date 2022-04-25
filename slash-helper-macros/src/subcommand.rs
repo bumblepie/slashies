@@ -4,7 +4,7 @@ use proc_macro_error::abort;
 use syn::{Ident, Variant, Meta, Lit, DataEnum};
 use quote::{quote, ToTokens};
 
-use crate::command::OptionTokenSections;
+use crate::{command::OptionTokenSections, utility};
 
 pub fn impl_subcommand_for_struct(
     identifier: Ident,
@@ -104,26 +104,13 @@ pub fn subcommand_token_sections_from_enum_variant(variant: &Variant) -> SubComm
                 Meta::NameValue(value) => value.lit,
                 _ => abort!(name_attr, "Invalid \"name\" attribute"),
             };
-            let doc_attr = variant
-                .attrs
-                .iter()
-                .find(|attr| attr.path.is_ident("doc"))
+            let description = utility::get_description(variant.attrs.as_slice())
                 .unwrap_or_else(|| {
                     abort!(
                         variant,
                         "Subcommands must specify a description via a docstring"
                     )
                 });
-            let doc_meta = doc_attr
-                .parse_meta()
-                .unwrap_or_else(|_| abort!(doc_attr, "Invalid docstring"));
-            let description = match doc_meta {
-                Meta::NameValue(ref value) => match value.lit {
-                    Lit::Str(ref description) => description.value(),
-                    _ => abort!(doc_attr, "Invalid description docstring"),
-                },
-                _ => abort!(doc_attr, "Invalid description docstring"),
-            };
             let field_type = field.ty.to_token_stream();
             if variant
                 .attrs
@@ -189,7 +176,7 @@ pub fn subcommands_for_enum(data: &DataEnum) -> Vec<SubCommandTokenSections> {
 pub fn impl_command_for_enum(
     identifier: Ident,
     name: Lit,
-    description: Lit,
+    description: &str,
     sub_commands: Vec<SubCommandTokenSections>,
 ) -> TokenStream {
     let (parse_fetch, variant_identifier, registration_fn): (Vec<_>, Vec<_>, Vec<_>) = sub_commands

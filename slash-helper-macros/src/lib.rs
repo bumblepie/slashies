@@ -12,6 +12,7 @@ mod command;
 mod commands;
 mod subcommand;
 mod subcommandgroup;
+mod utility;
 
 #[proc_macro_error]
 #[proc_macro_derive(Command, attributes(name, subcommandgroup, choice, channel_types))]
@@ -31,24 +32,15 @@ pub fn derive_commmand(input: TokenStream) -> TokenStream {
         Meta::NameValue(value) => value.lit,
         _ => abort!(name_attr, "Invalid \"name\" attribute"),
     };
-    let doc_attr = attrs
-        .iter()
-        .find(|attr| attr.path.is_ident("doc"))
+    let description = utility::get_description(attrs.as_slice())
         .unwrap_or_else(|| abort!(ident, "Command must specify a description via a docstring"));
-    let doc_meta = doc_attr
-        .parse_meta()
-        .unwrap_or_else(|_| abort!(doc_attr, "Invalid docstring"));
-    let description = match doc_meta {
-        Meta::NameValue(value) => value.lit,
-        _ => abort!(doc_attr, "Invalid description docstring"),
-    };
 
     match data {
         syn::Data::Struct(ref data) => {
-            impl_command_for_struct(ident, name, description, options_for_struct_data(data))
+            impl_command_for_struct(ident, name, &description, options_for_struct_data(data))
         }
         syn::Data::Enum(ref data) => {
-            impl_command_for_enum(ident, name, description, subcommands_for_enum(data))
+            impl_command_for_enum(ident, name, &description, subcommands_for_enum(data))
         }
         _ => abort!(ident, "Can only derive Command for structs (regular commands) or enums (commands with subcommands)"),
     }
