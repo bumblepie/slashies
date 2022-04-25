@@ -1,10 +1,10 @@
-use command::{impl_command_for_struct, impl_command_for_enum, options_for_struct_data, subcommands_for_enum};
+use command::{impl_command_for_struct, options_for_struct_data};
 use commands::get_commands_variant_info;
 use itertools::Itertools;
 use proc_macro::{self, TokenStream};
 use proc_macro_error::{proc_macro_error, abort};
-use quote::{quote};
-use subcommand::impl_subcommand_for_struct;
+use quote::quote;
+use subcommand::{impl_subcommand_for_struct, impl_command_for_enum, subcommands_for_enum};
 use subcommandgroup::impl_subcommandgroup_for_enum;
 use syn::{parse_macro_input, DeriveInput, Ident, Meta};
 

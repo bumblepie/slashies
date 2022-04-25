@@ -1,4 +1,4 @@
-use crate::command::SubCommandTokenSections;
+use crate::subcommand::SubCommandTokenSections;
 use itertools::Itertools;
 use proc_macro::TokenStream;
 use quote::quote;
