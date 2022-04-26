@@ -125,13 +125,61 @@ pub(crate) fn get_description(attrs: &[Attribute]) -> Option<String> {
         .find(|attr| attr.path.is_ident("doc"))
         .map(|attr| match attr.parse_meta() {
             Ok(meta) => (attr, meta),
-            _ => abort!(attr, "Invalid docstring"),
+            _ => abort!(attr, "Invalid description docstring"),
         })
         .map(|(attr, meta)| match meta {
             Meta::NameValue(ref value) => match value.lit {
                 Lit::Str(ref description) => description.value(),
-                _ => abort!(attr, "Invalid docstring",),
+                _ => abort!(attr, "Invalid description docstring",),
             },
-            _ => abort!(attr, "Invalid docstring",),
+            _ => abort!(attr, "Invalid description docstring",),
+        })
+}
+
+pub(crate) fn get_minimum_value(attrs: &[Attribute]) -> Option<proc_macro2::TokenStream> {
+    attrs
+        .iter()
+        .find(|attr| attr.path.is_ident("min"))
+        .map(|attr| match attr.parse_meta() {
+            Ok(meta) => (attr, meta),
+            _ => abort!(attr, "Invalid \"min\" attribute"),
+        })
+        .map(|(attr, meta)| match meta {
+            Meta::NameValue(name_value) => match name_value.lit {
+                Lit::Int(value) => quote! { .min_int_value(#value) },
+                Lit::Float(value) => quote! { .min_number_value(#value) },
+                _ => abort!(
+                    name_value,
+                    "Only integer and floating point number \"min\" values are supported"
+                ),
+            },
+            _ => abort!(
+                attr,
+                "Invalid \"min\" attribute. Attribute must be of the form #[min = value]"
+            ),
+        })
+}
+
+pub(crate) fn get_maximum_value(attrs: &[Attribute]) -> Option<proc_macro2::TokenStream> {
+    attrs
+        .iter()
+        .find(|attr| attr.path.is_ident("max"))
+        .map(|attr| match attr.parse_meta() {
+            Ok(meta) => (attr, meta),
+            _ => abort!(attr, "Invalid \"max\" attribute"),
+        })
+        .map(|(attr, meta)| match meta {
+            Meta::NameValue(name_value) => match name_value.lit {
+                Lit::Int(value) => quote! { .max_int_value(#value) },
+                Lit::Float(value) => quote! { .max_number_value(#value) },
+                _ => abort!(
+                    name_value,
+                    "Only integer and floating point number \"max\" values are supported"
+                ),
+            },
+            _ => abort!(
+                attr,
+                "Invalid \"miax\" attribute. Attribute must be of the form #[max = value]"
+            ),
         })
 }

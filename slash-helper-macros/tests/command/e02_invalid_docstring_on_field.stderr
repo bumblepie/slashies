@@ -1,4 +1,4 @@
-error: Invalid docstring
+error: Invalid description docstring
  --> tests/command/e02_invalid_docstring_on_field.rs:7:5
   |
 7 |     #[doc]

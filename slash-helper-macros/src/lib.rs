@@ -15,7 +15,7 @@ mod subcommandgroup;
 mod utility;
 
 #[proc_macro_error]
-#[proc_macro_derive(Command, attributes(name, subcommandgroup, choice, channel_types))]
+#[proc_macro_derive(Command, attributes(name, subcommandgroup, choice, channel_types, min, max))]
 pub fn derive_commmand(input: TokenStream) -> TokenStream {
     let DeriveInput {
         ident, data, attrs, ..

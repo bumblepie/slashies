@@ -1,0 +1,5 @@
+error: Invalid "miax" attribute. Attribute must be of the form #[max = value]
+ --> tests/command/e19_invalid_max_format.rs:8:5
+  |
+8 |     #[max]
+  |     ^^^^^^

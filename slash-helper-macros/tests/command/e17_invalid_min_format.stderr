@@ -1,0 +1,5 @@
+error: Invalid "min" attribute. Attribute must be of the form #[min = value]
+ --> tests/command/e17_invalid_min_format.rs:8:5
+  |
+8 |     #[min]
+  |     ^^^^^^

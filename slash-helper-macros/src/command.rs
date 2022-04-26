@@ -35,6 +35,8 @@ fn option_token_sections_from_field(field: &Field) -> OptionTokenSections {
     });
     let choices = utility::get_choices(field.attrs.as_slice());
     let channel_types = utility::get_channel_types(field.attrs.as_slice());
+    let min_value = utility::get_minimum_value(field.attrs.as_slice());
+    let max_value = utility::get_maximum_value(field.attrs.as_slice());
 
     let field_type = field.ty.to_token_stream();
     OptionTokenSections {
@@ -55,6 +57,8 @@ fn option_token_sections_from_field(field: &Field) -> OptionTokenSections {
                 .required(<#field_type as slash_helper::parsable::ParsableCommandOption>::is_required())
                 #(#choices)*
                 #channel_types
+                #min_value
+                #max_value
         },
     }
 }

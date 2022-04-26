@@ -1,0 +1,5 @@
+error: Only integer and floating point number "min" values are supported
+ --> tests/command/e18_invalid_min_type.rs:8:7
+  |
+8 |     #[min = "abc"]
+  |       ^^^^^^^^^^^
