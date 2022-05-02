@@ -1,0 +1,1 @@
+An example showing how to apply attributes such as choices and min/max values to command options. Requires a sqlite database containing movie data from imdb - you can generate this by running `imdb-sqlite` after installing it via `pip install imdb-sqlite` (source: https://github.com/jojje/imdb-sqlite). Note that this will take up ~10GB of space on your harddrive.

@@ -25,14 +25,34 @@ mod movie;
 #[name = "recommend"]
 struct RecommendCommand {
     /// The genre of movie to recommend
-    #[choice("Comedy", "comedy")]
-    #[choice("Action", "action")]
-    #[choice("Sci-Fi", "sci-fi")]
+    #[choice("Action")]
+    #[choice("Adventure")]
+    #[choice("Animation")]
+    #[choice("Biography")]
+    #[choice("Comedy")]
+    #[choice("Crime")]
+    #[choice("Documentary")]
+    #[choice("Drama")]
+    #[choice("Family")]
+    #[choice("Fantasy")]
+    #[choice("Film Noir")]
+    #[choice("History")]
+    #[choice("Horror")]
+    #[choice("Musical")]
+    #[choice("Music")]
+    #[choice("Mystery")]
+    #[choice("Romance")]
+    #[choice("Sci-Fi")]
+    #[choice("Short")]
+    #[choice("Sport")]
+    #[choice("Thriller")]
+    #[choice("War")]
+    #[choice("Western")]
     genre: String,
 
-    /// The minimum rating required for recommendations out of 5 stars
+    /// The minimum rating required for recommendations out of 10
     #[min = 0.0]
-    #[max = 5.0]
+    #[max = 10.0]
     min_rating: Option<f64>,
 
     /// The number of recommendations desired. Defaults to one.
@@ -67,10 +87,10 @@ impl ApplicationCommandInteractionHandler for RecommendCommand {
                                 embed
                                     .title(&rec.title)
                                     .field("Release Year", rec.release_year, false)
-                                    .field("Director", &rec.director, false)
+                                    .field("Director(s)", &rec.directors.join(", "), false)
                                     .field(
                                         "Average Rating",
-                                        format!("{:.2} / 5.0", rec.average_rating),
+                                        format!("{:.2} / 10.0", rec.average_rating),
                                         false,
                                     )
                                     .field("Genres", rec.genres.join(", "), false);
@@ -145,6 +165,8 @@ async fn main() {
         .expect("Expected a user id in the environment")
         .parse::<u64>()
         .expect("Invalid user id");
+    let imdb_sqlite_file =
+        std::env::var("IMDB_SQLITE_FILE").expect("Expected IMDB_SQLITE_FILE to be set");
 
     let mut client = Client::builder(&token, GatewayIntents::empty())
         .event_handler(Handler)
@@ -154,7 +176,7 @@ async fn main() {
 
     {
         let mut data = client.data.write().await;
-        data.insert::<Movies>(MovieDatabase {});
+        data.insert::<Movies>(MovieDatabase { imdb_sqlite_file });
     }
 
     if let Err(why) = client.start().await {
