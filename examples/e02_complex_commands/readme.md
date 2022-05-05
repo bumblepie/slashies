@@ -1,0 +1,1 @@
+An example showing a more complex command making use of many different types. You can also use custom types if needed by implementing the `ParsableCommandOption` trait.

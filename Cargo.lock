@@ -164,6 +164,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "e02_complex_commands"
+version = "0.1.0"
+dependencies = [
+ "serenity",
+ "slash-helper",
+ "slash-helper-macros",
+ "tokio",
+]
+
+[[package]]
 name = "e03_option_attributes"
 version = "0.1.0"
 dependencies = [
