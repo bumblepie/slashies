@@ -4,6 +4,7 @@ use serenity::{
     builder::CreateEmbed,
     client::{Context, EventHandler},
     model::{
+        channel::{ChannelType, PartialChannel},
         id::GuildId,
         interactions::{
             application_command::ApplicationCommandInteraction, Interaction,
@@ -20,7 +21,7 @@ use std::env::VarError;
 
 mod movie;
 
-/// Greet a user
+/// Recommend me a movie!
 #[derive(Debug, Command)]
 #[name = "recommend"]
 struct RecommendCommand {
@@ -106,9 +107,48 @@ impl ApplicationCommandInteractionHandler for RecommendCommand {
     }
 }
 
+/// Set the channel in which new movie releases are announced
+#[derive(Debug, Command)]
+#[name = "set_releases_channel"]
+struct SetReleasesChannelCommand {
+    /// The channel to announce releases in
+    #[channel_types(ChannelType::Text, ChannelType::News)]
+    channel: PartialChannel,
+}
+
+#[async_trait]
+impl ApplicationCommandInteractionHandler for SetReleasesChannelCommand {
+    async fn invoke(
+        &self,
+        ctx: &Context,
+        command: &ApplicationCommandInteraction,
+    ) -> Result<(), InvocationError> {
+        // We don't actually do anything as we don't actually track movie releases, but you might implement
+        // this by saving the channel id somewhere that can be accessed by a webhook triggered whenever a movie is released
+        command
+            .create_interaction_response(&ctx.http, |response| {
+                response
+                    .kind(InteractionResponseType::ChannelMessageWithSource)
+                    .interaction_response_data(|data| {
+                        data.content(format!(
+                            "Ok, I've set the movie releases channel to be {}",
+                            self.channel
+                                .name
+                                .as_ref()
+                                .expect("Expected channel to have a name")
+                        ))
+                    })
+            })
+            .await
+            .expect("Error sending command response");
+        Ok(())
+    }
+}
+
 #[derive(Debug, Commands)]
 enum Commands {
     Recommend(RecommendCommand),
+    SetReleasesChannelCommand(SetReleasesChannelCommand),
 }
 
 struct Handler;
@@ -140,8 +180,12 @@ impl EventHandler for Handler {
             Err(VarError::NotPresent) => None,
             _ => panic!("Invalid guild id provided at $TEST_GUILD_ID"),
         };
-        let commands = register_commands!(&ctx, guild_id, [RecommendCommand])
-            .expect("Unable to register commands");
+        let commands = register_commands!(
+            &ctx,
+            guild_id,
+            [RecommendCommand, SetReleasesChannelCommand]
+        )
+        .expect("Unable to register commands");
         println!(
             "Registered {} commands {}",
             commands.len(),

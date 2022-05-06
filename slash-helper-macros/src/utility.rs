@@ -1,8 +1,5 @@
-use std::collections::HashMap;
-
 use proc_macro_error::abort;
 use quote::quote;
-use serenity::model::channel::ChannelType;
 use syn::{Attribute, Lit, Meta, NestedMeta};
 
 pub(crate) fn get_choices(attrs: &[Attribute]) -> Vec<proc_macro2::TokenStream> {
@@ -43,76 +40,20 @@ pub(crate) fn get_choices(attrs: &[Attribute]) -> Vec<proc_macro2::TokenStream> 
         .collect::<Vec<_>>()
 }
 
-pub(crate) fn channel_type_from_string(name: &str) -> Option<proc_macro2::TokenStream> {
-    let all_types = HashMap::from([
-        (
-            ChannelType::Text.name(),
-            quote! { serenity::model::channel::ChannelType::Text },
-        ),
-        (
-            ChannelType::Private.name(),
-            quote! { serenity::model::channel::ChannelType::Private },
-        ),
-        (
-            ChannelType::Voice.name(),
-            quote! { serenity::model::channel::ChannelType::Voice },
-        ),
-        (
-            ChannelType::Category.name(),
-            quote! { serenity::model::channel::ChannelType::Category },
-        ),
-        (
-            ChannelType::News.name(),
-            quote! { serenity::model::channel::ChannelType::News },
-        ),
-        (
-            ChannelType::NewsThread.name(),
-            quote! { serenity::model::channel::ChannelType::NewsThread },
-        ),
-        (
-            ChannelType::PublicThread.name(),
-            quote! { serenity::model::channel::ChannelType::PublicThread },
-        ),
-        (
-            ChannelType::PrivateThread.name(),
-            quote! { serenity::model::channel::ChannelType::PrivateThread },
-        ),
-        (
-            ChannelType::Stage.name(),
-            quote! { serenity::model::channel::ChannelType::Stage },
-        ),
-        (
-            ChannelType::Directory.name(),
-            quote! { serenity::model::channel::ChannelType::Directory },
-        ),
-        (
-            ChannelType::Forum.name(),
-            quote! { serenity::model::channel::ChannelType::Forum },
-        ),
-        (
-            ChannelType::Unknown.name(),
-            quote! { serenity::model::channel::ChannelType::Unknown },
-        ),
-    ]);
-    all_types.get(name).map(|tokens| tokens.clone())
-}
-
 pub(crate) fn get_channel_types(attrs: &[Attribute]) -> Option<proc_macro2::TokenStream> {
     attrs.iter().find(|attr| attr.path.is_ident("channel_types"))
         .map(|attr| match attr.parse_meta() {
             Ok(meta) => (attr, meta),
-            _ => abort!(attr, "Invalid \"channel_type\" attribute"),
+            _ => abort!(attr, "Invalid \"channel_types\" attribute"),
         })
         .map(|(attr, meta)| match meta {
             Meta::List(list) => {
                 list.nested.iter().map(|nested| match nested {
-                    NestedMeta::Lit(Lit::Str(ref value)) => {
-                        channel_type_from_string(&value.value()).unwrap_or_else(|| abort!(nested, "Invalid channel type"))
-                    },
+                    NestedMeta::Meta(Meta::Path(path)) => quote!{ #path },
                     _ => abort!(nested, "Invalid channel type"),
                 }).collect()
             },
-            _ => abort!(attr, "Invalid \"channel_type\" attribute. Attribute must be of the form channel_type(type1, type2...)"),
+            _ => abort!(attr, "Invalid \"channel_types\" attribute. Attribute must be of the form channel_types(type1, type2...)"),
         }
     ).map(|channel_types: Vec<_>| {
         quote! { .channel_types(&[#(#channel_types,)*]) }
