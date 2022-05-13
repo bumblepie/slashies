@@ -21,7 +21,7 @@ pub fn impl_subcommandgroup_for_enum(
         .multiunzip();
     quote! {
         impl slash_helper::SubCommandGroup for #identifier {
-            fn parse(option: Option<&ApplicationCommandInteractionDataOption>) -> Result<Self, ParseError> {
+            fn parse(option: Option<&serenity::model::interactions::application_command::ApplicationCommandInteractionDataOption>) -> Result<Self, slash_helper::ParseError> {
                 let options: std::collections::HashMap<String, serenity::model::interactions::application_command::ApplicationCommandInteractionDataOption> = option
                     .ok_or(slash_helper::ParseError::MissingOption)?
                     .options
@@ -37,8 +37,8 @@ pub fn impl_subcommandgroup_for_enum(
             }
 
             fn register_sub_options(
-                option: &mut CreateApplicationCommandOption,
-            ) -> &mut CreateApplicationCommandOption {
+                option: &mut serenity::builder::CreateApplicationCommandOption,
+            ) -> &mut serenity::builder::CreateApplicationCommandOption {
                 option
                 #(.create_sub_option(#registration_fn))*
             }
