@@ -13,7 +13,9 @@ use serenity::{
     prelude::GatewayIntents,
     Client,
 };
-use slash_helper::{register_commands, ApplicationCommandInteractionHandler, InvocationError};
+use slash_helper::{
+    register_commands, ApplicationCommandInteractionHandler, Commands, InvocationError,
+};
 use slash_helper_macros::{Command, Commands};
 use std::env::VarError;
 
@@ -50,7 +52,7 @@ impl ApplicationCommandInteractionHandler for HelloCommand {
 }
 
 #[derive(Debug, Commands)]
-enum Commands {
+enum BotCommands {
     Hello(HelloCommand),
 }
 
@@ -61,7 +63,7 @@ impl EventHandler for Handler {
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         match interaction {
             Interaction::ApplicationCommand(command_interaction) => {
-                Commands::parse(&ctx, &command_interaction)
+                BotCommands::parse(&ctx, &command_interaction)
                     .expect("Failed to parse command")
                     .invoke(&ctx, &command_interaction)
                     .await

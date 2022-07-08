@@ -47,7 +47,7 @@ pub fn derive_commmand(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_error]
-#[proc_macro_derive(SubCommand, attributes(name))]
+#[proc_macro_derive(SubCommand, attributes(name, choice, channel_types, min, max))]
 pub fn derive_subcommmand(input: TokenStream) -> TokenStream {
     let DeriveInput {
         ident, data, ..
@@ -93,8 +93,9 @@ pub fn derive_commands(input: TokenStream) -> TokenStream {
         _ => abort!(ident, "Can only derive Commands for enums"),
     };
     quote!{
-        impl Commands {
-            pub fn parse(
+        #[async_trait]
+        impl slash_helper::Commands for #ident {
+            fn parse(
                 _ctx: &Context,
                 command: &ApplicationCommandInteraction,
             ) -> Result<Self, slash_helper::ParseError> {
@@ -104,7 +105,7 @@ pub fn derive_commands(input: TokenStream) -> TokenStream {
                 }
             }
         
-            pub async fn invoke(
+            async fn invoke(
                 &self,
                 ctx: &Context,
                 command_interaction: &ApplicationCommandInteraction,
