@@ -165,7 +165,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "e02_complex_commands"
+name = "e02_madlibs"
 version = "0.1.0"
 dependencies = [
  "serenity",
@@ -175,7 +175,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "e03_option_attributes"
+name = "e03_moviebot"
 version = "0.1.0"
 dependencies = [
  "rusqlite",
@@ -186,7 +186,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "e04_subcommands_and_groups"
+name = "e04_permissions"
 version = "0.1.0"
 dependencies = [
  "serenity",

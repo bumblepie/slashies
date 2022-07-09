@@ -1,5 +1,5 @@
 [package]
-name = "e04_subcommands_and_groups"
+name = "e02_madlibs"
 version = "0.1.0"
 edition = "2021"
 
