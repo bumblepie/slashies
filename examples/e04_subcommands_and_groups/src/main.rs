@@ -71,10 +71,31 @@ struct EditPermissionsForUserCommand {
 impl ApplicationCommandInteractionHandler for EditPermissionsForUserCommand {
     async fn invoke(
         &self,
-        _ctx: &Context,
-        _command: &ApplicationCommandInteraction,
+        ctx: &Context,
+        command: &ApplicationCommandInteraction,
     ) -> Result<(), InvocationError> {
-        unimplemented!()
+        let response_string = if let Some(ref channel) = self.channel {
+            format!(
+                "Editing permissions for user {0} in {1}...",
+                self.user.0.mention(),
+                channel.id.mention(),
+            )
+        } else {
+            format!(
+                "Editing guild permissions for user {0}...",
+                self.user.0.mention()
+            )
+        };
+
+        command
+            .create_interaction_response(&ctx.http, |response| {
+                response
+                    .kind(InteractionResponseType::ChannelMessageWithSource)
+                    .interaction_response_data(|data| data.content(response_string))
+            })
+            .await
+            .expect("Failed to send response");
+        Ok(())
     }
 }
 
@@ -162,10 +183,31 @@ struct EditPermissionsForRoleCommand {
 impl ApplicationCommandInteractionHandler for EditPermissionsForRoleCommand {
     async fn invoke(
         &self,
-        _ctx: &Context,
-        _command: &ApplicationCommandInteraction,
+        ctx: &Context,
+        command: &ApplicationCommandInteraction,
     ) -> Result<(), InvocationError> {
-        unimplemented!()
+        let response_string = if let Some(ref channel) = self.channel {
+            format!(
+                "Editing permissions for role {0} in {1}...",
+                self.role.mention(),
+                channel.id.mention(),
+            )
+        } else {
+            format!(
+                "Editing guild permissions for role {0}...",
+                self.role.mention()
+            )
+        };
+
+        command
+            .create_interaction_response(&ctx.http, |response| {
+                response
+                    .kind(InteractionResponseType::ChannelMessageWithSource)
+                    .interaction_response_data(|data| data.content(response_string))
+            })
+            .await
+            .expect("Failed to send response");
+        Ok(())
     }
 }
 
