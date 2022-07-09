@@ -117,3 +117,34 @@ pub fn derive_commands(input: TokenStream) -> TokenStream {
         }
     }.into()
 }
+
+#[proc_macro_error]
+#[proc_macro_derive(ApplicationCommandInteractionHandler)]
+pub fn derive_application_command_interaction_handler(input: TokenStream) -> TokenStream {
+    let DeriveInput {
+        ident, data, ..
+    } = parse_macro_input!(input);
+
+    let variant_identifier: Vec<Ident> = match data {
+        syn::Data::Enum(ref data) => {
+            data.variants.iter()
+                .map(|variant| variant.ident.clone())
+                .collect()
+        }
+        _ => abort!(ident, "Can only derive ApplicationCommandInteractionHandler for enums"),
+    };
+    quote!{
+        #[async_trait]
+        impl slash_helper::ApplicationCommandInteractionHandler for #ident {
+            async fn invoke(
+                &self,
+                ctx: &Context,
+                command_interaction: &ApplicationCommandInteraction,
+            ) -> Result<(), InvocationError> {
+                match self {
+                    #(Self::#variant_identifier(command) => command.invoke(ctx, command_interaction).await,)*
+                }
+            }
+        }
+    }.into()
+}

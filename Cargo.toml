@@ -5,4 +5,5 @@ members = [
     "examples/e01_hello_world",
     "examples/e02_complex_commands",
     "examples/e03_option_attributes",
+    "examples/e04_subcommands_and_groups",
 ]
