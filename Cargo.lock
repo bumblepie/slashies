@@ -159,8 +159,8 @@ name = "e01_hello_world"
 version = "0.1.0"
 dependencies = [
  "serenity",
- "slash-helper",
- "slash-helper-macros",
+ "slashies",
+ "slashies-macros",
  "tokio",
 ]
 
@@ -169,8 +169,8 @@ name = "e02_madlibs"
 version = "0.1.0"
 dependencies = [
  "serenity",
- "slash-helper",
- "slash-helper-macros",
+ "slashies",
+ "slashies-macros",
  "tokio",
 ]
 
@@ -180,8 +180,8 @@ version = "0.1.0"
 dependencies = [
  "rusqlite",
  "serenity",
- "slash-helper",
- "slash-helper-macros",
+ "slashies",
+ "slashies-macros",
  "tokio",
 ]
 
@@ -190,8 +190,8 @@ name = "e04_permissions"
 version = "0.1.0"
 dependencies = [
  "serenity",
- "slash-helper",
- "slash-helper-macros",
+ "slashies",
+ "slashies-macros",
  "tokio",
 ]
 
@@ -996,14 +996,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eb703cfe953bccee95685111adeedb76fabe4e97549a58d16f03ea7b9367bb32"
 
 [[package]]
-name = "slash-helper"
+name = "slashies"
 version = "0.1.0"
 dependencies = [
  "serenity",
 ]
 
 [[package]]
-name = "slash-helper-macros"
+name = "slashies-macros"
 version = "0.1.0"
 dependencies = [
  "itertools",
@@ -1011,7 +1011,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "serenity",
- "slash-helper",
+ "slashies",
  "syn",
  "trybuild",
 ]

@@ -15,10 +15,10 @@ use serenity::{
     prelude::{GatewayIntents, TypeMapKey},
     Client,
 };
-use slash_helper::{
+use slashies::{
     register_commands, ApplicationCommandInteractionHandler, Commands, InvocationError,
 };
-use slash_helper_macros::{Command, Commands};
+use slashies_macros::{Command, Commands};
 use std::env::VarError;
 
 mod movie;

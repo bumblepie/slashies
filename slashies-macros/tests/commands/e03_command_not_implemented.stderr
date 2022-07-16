@@ -1,0 +1,83 @@
+error[E0706]: functions in traits cannot be declared `async`
+ --> tests/commands/e03_command_not_implemented.rs:3:10
+  |
+3 | #[derive(Commands)]
+  |          ^^^^^^^^ `async` because of this
+  |
+  = note: `async` trait functions are not currently supported
+  = note: consider using the `async-trait` crate: https://crates.io/crates/async-trait
+  = note: this error originates in the derive macro `Commands` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: cannot find attribute `async_trait` in this scope
+ --> tests/commands/e03_command_not_implemented.rs:3:10
+  |
+3 | #[derive(Commands)]
+  |          ^^^^^^^^
+  |
+  = note: consider importing this attribute macro:
+          serenity::async_trait
+  = note: this error originates in the derive macro `Commands` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0412]: cannot find type `Context` in this scope
+ --> tests/commands/e03_command_not_implemented.rs:3:10
+  |
+3 | #[derive(Commands)]
+  |          ^^^^^^^^ not found in this scope
+  |
+  = note: this error originates in the derive macro `Commands` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: consider importing one of these items
+  |
+1 | use core::task::Context;
+  |
+1 | use serenity::client::Context;
+  |
+1 | use std::task::Context;
+  |
+
+error[E0412]: cannot find type `ApplicationCommandInteraction` in this scope
+ --> tests/commands/e03_command_not_implemented.rs:3:10
+  |
+3 | #[derive(Commands)]
+  |          ^^^^^^^^ not found in this scope
+  |
+  = note: this error originates in the derive macro `Commands` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: consider importing this struct
+  |
+1 | use serenity::model::prelude::application_command::ApplicationCommandInteraction;
+  |
+
+error[E0412]: cannot find type `InvocationError` in this scope
+ --> tests/commands/e03_command_not_implemented.rs:3:10
+  |
+3 | #[derive(Commands)]
+  |          ^^^^^^^^ not found in this scope
+  |
+  = note: this error originates in the derive macro `Commands` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: consider importing this struct
+  |
+1 | use slashies::InvocationError;
+  |
+
+error[E0195]: lifetime parameters or bounds on method `invoke` do not match the trait declaration
+ --> tests/commands/e03_command_not_implemented.rs:3:18
+  |
+3 | #[derive(Commands)]
+  |                  ^ lifetimes do not match method in trait
+  |
+  = note: this error originates in the derive macro `Commands` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0599]: no method named `invoke` found for reference `&u64` in the current scope
+ --> tests/commands/e03_command_not_implemented.rs:3:10
+  |
+3 | #[derive(Commands)]
+  |          ^^^^^^^^ method not found in `&u64`
+  |
+  = note: this error originates in the derive macro `Commands` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0277]: the trait bound `u64: slashies::Command` is not satisfied
+ --> tests/commands/e03_command_not_implemented.rs:3:10
+  |
+3 | #[derive(Commands)]
+  |          ^^^^^^^^ the trait `slashies::Command` is not implemented for `u64`
+  |
+  = note: this error originates in the derive macro `Commands` (in Nightly builds, run with -Z macro-backtrace for more info)

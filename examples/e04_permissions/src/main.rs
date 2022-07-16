@@ -14,11 +14,11 @@ use serenity::{
     prelude::{GatewayIntents, Mentionable},
     Client,
 };
-use slash_helper::{
+use slashies::{
     parsable::UserInput, register_commands, ApplicationCommandInteractionHandler, Commands,
     InvocationError,
 };
-use slash_helper_macros::{
+use slashies_macros::{
     ApplicationCommandInteractionHandler, Command, Commands, SubCommand, SubCommandGroup,
 };
 use std::env::VarError;

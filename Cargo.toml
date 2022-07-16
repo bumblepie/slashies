@@ -1,7 +1,7 @@
 [workspace]
 members = [
-    "slash-helper",
-    "slash-helper-macros",
+    "slashies",
+    "slashies-macros",
     "examples/e01_hello_world",
     "examples/e02_madlibs",
     "examples/e03_moviebot",

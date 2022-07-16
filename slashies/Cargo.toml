@@ -1,12 +1,14 @@
 [package]
-name = "e02_madlibs"
+name = "slashies"
+description = "Slashies helps to reduce the boiler plate code needed to create slash commands for a Discord bot."
 version = "0.1.0"
 edition = "2021"
+repository = "https://github.com/bumblepie/slashies"
+license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 serenity = { version = "0.11", default-features = false, features = [
     "cache",
     "client",
@@ -16,5 +18,3 @@ serenity = { version = "0.11", default-features = false, features = [
     "model",
     "unstable_discord_api",
 ] }
-slashies = { path = "../../slashies" }
-slashies-macros = { path = "../../slashies-macros" }

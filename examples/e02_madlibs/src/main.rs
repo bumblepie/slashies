@@ -14,11 +14,11 @@ use serenity::{
     prelude::GatewayIntents,
     Client,
 };
-use slash_helper::{
+use slashies::{
     parsable::{Mentionable, UserInput},
     register_commands, ApplicationCommandInteractionHandler, Commands, InvocationError,
 };
-use slash_helper_macros::{Command, Commands};
+use slashies_macros::{Command, Commands};
 use std::env::VarError;
 
 /// Create a madlib
