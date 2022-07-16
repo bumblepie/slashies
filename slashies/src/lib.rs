@@ -258,6 +258,10 @@ pub trait Command: ApplicationCommandInteractionHandler + Sized {
 /// }
 /// ```
 ///
+/// If there is a lot of shared behaviour between the subcommands, you may wish to directly implement
+/// the [`ApplicationCommandInteractionHandler`] trait for this [`Command`] enum rather than for each
+/// [`SubCommand`].
+///
 /// To organize subcommands into groups, see the [`SubCommandGroup`] trait
 pub trait SubCommand: Sized {
     /// Try to parse this from a command option
