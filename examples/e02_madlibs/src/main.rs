@@ -3,20 +3,20 @@ use serenity::{
     client::{Context, EventHandler},
     model::{
         channel::PartialChannel,
-        guild::{PartialMember, Role},
+        guild::Role,
         id::GuildId,
         interactions::{
             application_command::ApplicationCommandInteraction, Interaction,
             InteractionResponseType,
         },
-        prelude::{Ready, User},
+        prelude::Ready,
     },
     prelude::GatewayIntents,
     Client,
 };
 use slash_helper::{
-    parsable::Mentionable, register_commands, ApplicationCommandInteractionHandler, Commands,
-    InvocationError,
+    parsable::{Mentionable, UserInput},
+    register_commands, ApplicationCommandInteractionHandler, Commands, InvocationError,
 };
 use slash_helper_macros::{Command, Commands};
 use std::env::VarError;
@@ -50,7 +50,7 @@ struct MadlibCommand {
     mentionable: Mentionable,
 
     /// A user
-    user: (User, Option<PartialMember>),
+    user: UserInput,
 }
 
 #[async_trait]
@@ -62,11 +62,11 @@ impl ApplicationCommandInteractionHandler for MadlibCommand {
     ) -> Result<(), InvocationError> {
         let username = self
             .user
-            .1
+            .member
             .as_ref()
             .map(|pm| pm.nick.as_ref())
             .flatten()
-            .unwrap_or(&self.user.0.name);
+            .unwrap_or(&self.user.user.name);
         let verb = self.verb.clone().unwrap_or("love".to_owned());
         let channel_name = self
             .channel
@@ -98,8 +98,7 @@ impl ApplicationCommandInteractionHandler for MadlibCommand {
             sentences.push(format!(
                 "The only {}, who taught {} how to {}.",
                 match self.mentionable {
-                    Mentionable::User(ref user, ref _pm) =>
-                        format!("one of any use was {}", user.name),
+                    Mentionable::User(ref user) => format!("one of any use was {}", user.user.name),
                     Mentionable::Role(ref role) => format!("ones of any use were {}", role.name),
                 },
                 username,

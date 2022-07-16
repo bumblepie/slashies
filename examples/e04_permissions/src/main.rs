@@ -3,19 +3,20 @@ use serenity::{
     client::{Context, EventHandler},
     model::{
         channel::{Channel, ChannelType, PartialChannel},
-        guild::{PartialMember, Role},
+        guild::Role,
         id::GuildId,
         interactions::{
             application_command::ApplicationCommandInteraction, Interaction,
             InteractionResponseType,
         },
-        prelude::{Ready, User},
+        prelude::Ready,
     },
     prelude::{GatewayIntents, Mentionable},
     Client,
 };
 use slash_helper::{
-    register_commands, ApplicationCommandInteractionHandler, Commands, InvocationError,
+    parsable::UserInput, register_commands, ApplicationCommandInteractionHandler, Commands,
+    InvocationError,
 };
 use slash_helper_macros::{
     ApplicationCommandInteractionHandler, Command, Commands, SubCommand, SubCommandGroup,
@@ -60,7 +61,7 @@ enum RoleSubCommandGroup {
 #[derive(Debug, SubCommand)]
 struct EditPermissionsForUserCommand {
     /// The user to edit
-    pub user: (User, Option<PartialMember>),
+    pub user: UserInput,
 
     /// The channel permissions to edit. If omitted, the guild permissions will be edited
     #[channel_types(ChannelType::Text)]
@@ -77,13 +78,13 @@ impl ApplicationCommandInteractionHandler for EditPermissionsForUserCommand {
         let response_string = if let Some(ref channel) = self.channel {
             format!(
                 "Editing permissions for user {0} in {1}...",
-                self.user.0.mention(),
+                self.user.user.mention(),
                 channel.id.mention(),
             )
         } else {
             format!(
                 "Editing guild permissions for user {0}...",
-                self.user.0.mention()
+                self.user.user.mention()
             )
         };
 
@@ -102,7 +103,7 @@ impl ApplicationCommandInteractionHandler for EditPermissionsForUserCommand {
 #[derive(Debug, SubCommand)]
 struct GetPermissionsForUserCommand {
     /// The user to get
-    pub user: (User, Option<PartialMember>),
+    pub user: UserInput,
 
     /// The channel permissions to get. If omitted, the guild permissions will be returned
     pub channel: Option<PartialChannel>,
@@ -122,7 +123,7 @@ impl ApplicationCommandInteractionHandler for GetPermissionsForUserCommand {
             .await
             .expect("Error getting guild");
         let member = guild
-            .member(&ctx.http, self.user.0.id)
+            .member(&ctx.http, self.user.user.id)
             .await
             .expect("Error getting member");
         let response_string = if let Some(ref channel) = self.channel {
@@ -137,7 +138,7 @@ impl ApplicationCommandInteractionHandler for GetPermissionsForUserCommand {
                     .expect("Error getting permissions");
                 format!(
                     "User {} has the following permissions in channel {}:\n{}",
-                    self.user.0.mention(),
+                    self.user.user.mention(),
                     channel.mention(),
                     permissions.get_permission_names().join("\n"),
                 )
@@ -147,14 +148,14 @@ impl ApplicationCommandInteractionHandler for GetPermissionsForUserCommand {
         } else {
             let permissions = self
                 .user
-                .1
+                .member
                 .as_ref()
                 .expect("Command can only be called from guild")
                 .permissions
                 .expect("Error getting permissions");
             format!(
                 "User {} has the following permissions in this guild:\n{}",
-                self.user.0.mention(),
+                self.user.user.mention(),
                 permissions.get_permission_names().join("\n"),
             )
         };

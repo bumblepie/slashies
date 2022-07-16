@@ -14,7 +14,7 @@
 //! #[name = "greet"]
 //! struct HelloCommand {
 //!     /// The user to greet
-//!     user: (User, Option<PartialMember>),
+//!     user: UserInput,
 //! }
 //! ```
 //! 2. Implement the [`ApplicationCommandInteractionHandler`] trait to define what happens when you call the command
@@ -110,6 +110,7 @@ use serenity::{
     },
 };
 
+/// This module contains logic for parsing Discord types from interactions into rust types
 pub mod parsable;
 
 /// An error that occured while trying to parse a command
@@ -134,7 +135,7 @@ pub struct InvocationError;
 /// #[name = "greet"]
 /// struct HelloCommand {
 ///     /// The user to greet
-///     user: (User, Option<PartialMember>),
+///     user: UserInput,
 /// }
 /// ```
 /// To derive the trait, you must provide the following (see the example above):

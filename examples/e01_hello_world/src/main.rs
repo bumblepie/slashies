@@ -2,19 +2,19 @@ use serenity::{
     async_trait,
     client::{Context, EventHandler},
     model::{
-        guild::PartialMember,
         id::GuildId,
         interactions::{
             application_command::ApplicationCommandInteraction, Interaction,
             InteractionResponseType,
         },
-        prelude::{Ready, User},
+        prelude::Ready,
     },
     prelude::GatewayIntents,
     Client,
 };
 use slash_helper::{
-    register_commands, ApplicationCommandInteractionHandler, Commands, InvocationError,
+    parsable::UserInput, register_commands, ApplicationCommandInteractionHandler, Commands,
+    InvocationError,
 };
 use slash_helper_macros::{Command, Commands};
 use std::env::VarError;
@@ -24,7 +24,7 @@ use std::env::VarError;
 #[name = "greet"]
 struct HelloCommand {
     /// The user to greet
-    user: (User, Option<PartialMember>),
+    user: UserInput,
 }
 
 #[async_trait]
@@ -34,11 +34,16 @@ impl ApplicationCommandInteractionHandler for HelloCommand {
         ctx: &Context,
         command: &ApplicationCommandInteraction,
     ) -> Result<(), InvocationError> {
-        let nickname = self.user.1.as_ref().map(|pm| pm.nick.as_ref()).flatten();
+        let nickname = self
+            .user
+            .member
+            .as_ref()
+            .map(|pm| pm.nick.as_ref())
+            .flatten();
         let greeting = if let Some(nick) = nickname {
-            format!("Hello {} aka {}", self.user.0.name, nick)
+            format!("Hello {} aka {}", self.user.user.name, nick)
         } else {
-            format!("Hello {}", self.user.0.name)
+            format!("Hello {}", self.user.user.name)
         };
         command
             .create_interaction_response(&ctx.http, |response| {

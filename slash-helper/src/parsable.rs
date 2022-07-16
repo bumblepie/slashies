@@ -102,7 +102,16 @@ impl ParsableCommandOption for bool {
     }
 }
 
-impl ParsableCommandOption for (User, Option<PartialMember>) {
+/// An input for the USER Discord type
+#[derive(Debug, Clone)]
+pub struct UserInput {
+    /// The user
+    pub user: User,
+    /// The user's guild member info (if applicable)
+    pub member: Option<PartialMember>,
+}
+
+impl ParsableCommandOption for UserInput {
     fn parse_from(
         option: Option<&ApplicationCommandInteractionDataOption>,
     ) -> Result<Self, ParseError> {
@@ -112,7 +121,10 @@ impl ParsableCommandOption for (User, Option<PartialMember>) {
             .clone()
             .ok_or(ParseError::MissingOption)?
         {
-            ApplicationCommandInteractionDataOptionValue::User(u, pm) => Ok((u, pm)),
+            ApplicationCommandInteractionDataOptionValue::User(u, pm) => Ok(UserInput {
+                user: u,
+                member: pm,
+            }),
             _ => Err(ParseError::InvalidOption),
         }
     }
@@ -169,7 +181,7 @@ pub enum Mentionable {
     /// A role
     Role(Role),
     /// A user
-    User(User, Option<PartialMember>),
+    User(UserInput),
 }
 
 impl ParsableCommandOption for Mentionable {
@@ -183,7 +195,12 @@ impl ParsableCommandOption for Mentionable {
             .ok_or(ParseError::MissingOption)?
         {
             ApplicationCommandInteractionDataOptionValue::Role(r) => Ok(Self::Role(r)),
-            ApplicationCommandInteractionDataOptionValue::User(u, pm) => Ok(Self::User(u, pm)),
+            ApplicationCommandInteractionDataOptionValue::User(u, pm) => {
+                Ok(Self::User(UserInput {
+                    user: u,
+                    member: pm,
+                }))
+            }
             _ => Err(ParseError::InvalidOption),
         }
     }
