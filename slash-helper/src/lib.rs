@@ -128,7 +128,9 @@ pub enum ParseError {
 #[derive(Debug, Clone)]
 pub struct InvocationError;
 
-/// This trait provides the methods needed to parse and register a slash command. For most use cases, just derive it via the macros crate:
+/// This trait provides the methods needed to parse and register a slash command.
+///
+/// For most use cases, just derive it via the macros crate:
 /// ```
 /// /// Greet a user
 /// #[derive(Debug, Command)]
@@ -163,6 +165,7 @@ pub trait Command: ApplicationCommandInteractionHandler + Sized {
 }
 
 /// This trait provides the functions necessary to parse and register a subcommand for a slash command.
+///
 /// For most use cases:
 /// 1. Create the subcommand in the same way you would create a [`Command`], but derive the [`SubCommand`] trait instead
 /// (Remember to implement [`ApplicationCommandInteractionHandler`])
@@ -206,6 +209,7 @@ pub trait SubCommand: Sized {
 }
 
 /// This trait provides the functions necessary to parse and register a subcommand group for a slash command.
+///
 /// For most use cases:
 /// 1. Create the "leaf" subcommands as normal (see [`SubCommand`] docs)
 /// 2. Create an enum with a variant for each subcommand in the subcommand group and derive the [`SubCommandGroup`] and
@@ -255,6 +259,7 @@ pub trait SubCommandGroup: Sized {
 }
 
 /// This trait provides function to receive and respond to slash command interactions.
+///
 /// Typically you will want to respond using [`create_interaction_response`] - see the [`serenity`] docs for more info.
 ///
 /// ```
@@ -293,8 +298,9 @@ pub trait ApplicationCommandInteractionHandler {
     ) -> Result<(), InvocationError>;
 }
 
-/// This trait provides function to receive and respond to message component interactions.
-/// TODO: more docs
+/// This trait provides a function to receive and respond to message component interactions.
+///
+/// TODO: more docs around handler map context
 #[async_trait]
 pub trait MessageComponentInteractionHandler {
     /// Handle the message component interaction
