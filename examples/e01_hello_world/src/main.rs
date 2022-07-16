@@ -78,7 +78,7 @@ impl EventHandler for Handler {
         let guild_id = std::env::var("TEST_GUILD_ID").map(|id| {
             id.parse()
                 .map(|id| GuildId(id))
-                .expect("Invalid test guild id id")
+                .expect(&format!("Invalid test guild id {}", id))
         });
         let guild_id = match guild_id {
             Ok(id) => Some(id),
