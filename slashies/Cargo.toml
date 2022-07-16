@@ -18,3 +18,7 @@ serenity = { version = "0.11", default-features = false, features = [
     "model",
     "unstable_discord_api",
 ] }
+
+[dev-dependencies]
+slashies-macros = { path = "../slashies-macros" }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

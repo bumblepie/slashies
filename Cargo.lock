@@ -1000,6 +1000,8 @@ name = "slashies"
 version = "0.1.0"
 dependencies = [
  "serenity",
+ "slashies-macros",
+ "tokio",
 ]
 
 [[package]]

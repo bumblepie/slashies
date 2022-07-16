@@ -93,11 +93,11 @@ pub fn derive_commands(input: TokenStream) -> TokenStream {
         _ => abort!(ident, "Can only derive Commands for enums"),
     };
     quote!{
-        #[async_trait]
+        #[serenity::async_trait]
         impl slashies::Commands for #ident {
             fn parse(
-                _ctx: &Context,
-                command: &ApplicationCommandInteraction,
+                _ctx: &serenity::prelude::Context,
+                command: &serenity::model::prelude::application_command::ApplicationCommandInteraction,
             ) -> Result<Self, slashies::ParseError> {
                 match command.data.name.as_ref() {
                     #(name if name == <#field_type as slashies::Command>::name() => Ok(Self::#variant_identifier(<#field_type as slashies::Command>::parse(command)?)),)*
@@ -107,9 +107,9 @@ pub fn derive_commands(input: TokenStream) -> TokenStream {
         
             async fn invoke(
                 &self,
-                ctx: &Context,
-                command_interaction: &ApplicationCommandInteraction,
-            ) -> Result<(), InvocationError> {
+                ctx: &serenity::prelude::Context,
+                command_interaction: &serenity::model::prelude::application_command::ApplicationCommandInteraction,
+            ) -> Result<(), slashies::InvocationError> {
                 match self {
                     #(Self::#variant_identifier(command) => command.invoke(ctx, command_interaction).await,)*
                 }
@@ -134,11 +134,11 @@ pub fn derive_application_command_interaction_handler(input: TokenStream) -> Tok
         _ => abort!(ident, "Can only derive ApplicationCommandInteractionHandler for enums"),
     };
     quote!{
-        #[async_trait]
+        #[serenity::async_trait]
         impl slashies::ApplicationCommandInteractionHandler for #ident {
             async fn invoke(
                 &self,
-                ctx: &Context,
+                ctx: &serenity::prelude::Context,
                 command_interaction: &ApplicationCommandInteraction,
             ) -> Result<(), InvocationError> {
                 match self {

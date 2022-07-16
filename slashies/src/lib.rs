@@ -7,8 +7,15 @@
 //! [`Serenity`]: serenity
 //!
 //! With slashies, you can create a slash command in four easy steps:
-//! 1. Create a struct representing the arguments for the command and derive/implement the [`Command`] trait
-//! ```
+//! ```no_run
+//! // 1. Create a struct representing the arguments for the command and derive/implement the Command trait
+//! # use slashies::*;
+//! # use slashies::parsable::*;
+//! # use slashies_macros::*;
+//! # use serenity::async_trait;
+//! # use serenity::prelude::*;
+//! # use serenity::model::prelude::*;
+//! # use serenity::model::prelude::application_command::*;
 //! /// Greet a user
 //! #[derive(Debug, Command)]
 //! #[name = "greet"]
@@ -16,9 +23,8 @@
 //!     /// The user to greet
 //!     user: UserInput,
 //! }
-//! ```
-//! 2. Implement the [`ApplicationCommandInteractionHandler`] trait to define what happens when you call the command
-//! ```
+//!
+//! // 2. Implement the ApplicationCommandInteractionHandler trait to define what happens when you call the command
 //! #[async_trait]
 //! impl ApplicationCommandInteractionHandler for HelloCommand {
 //!    async fn invoke(
@@ -26,11 +32,11 @@
 //!        ctx: &Context,
 //!        command: &ApplicationCommandInteraction,
 //!    ) -> Result<(), InvocationError> {
-//!        let nickname = self.user.1.as_ref().map(|pm| pm.nick.as_ref()).flatten();
+//!        let nickname = self.user.member.as_ref().map(|pm| pm.nick.as_ref()).flatten();
 //!        let greeting = if let Some(nick) = nickname {
-//!            format!("Hello {} aka {}", self.user.0.name, nick)
+//!            format!("Hello {} aka {}", self.user.user.name, nick)
 //!        } else {
-//!            format!("Hello {}", self.user.0.name)
+//!            format!("Hello {}", self.user.user.name)
 //!        };
 //!        command
 //!            .create_interaction_response(&ctx.http, |response| {
@@ -42,16 +48,14 @@
 //!            .map_err(|_| InvocationError)
 //!    }
 //! }
-//! ```
-//! 3. Add the command to an enum that implements the [`Commands`] trait, representing all the commands for the bot
-//! ```
+//!
+//! // 3. Add the command to an enum that implements the Commands trait, representing all the commands for the bot
 //! #[derive(Debug, Commands)]
 //! enum BotCommands {
 //!     Hello(HelloCommand),
 //! }
-//! ```
-//! 4. Add the basic code to register the command (via the [`register_commands`] macro) and handle interactions
-//! ```
+//!
+//! // 4. Add the basic code to register the command via a macro and handle interactions
 //! struct Handler;
 //!
 //! #[async_trait]
@@ -132,6 +136,12 @@ pub struct InvocationError;
 ///
 /// For most use cases, just derive it via the macros crate:
 /// ```
+/// # use slashies::*;
+/// # use slashies::parsable::*;
+/// # use slashies_macros::*;
+/// # use serenity::async_trait;
+/// # use serenity::prelude::*;
+/// # use serenity::model::prelude::application_command::*;
 /// /// Greet a user
 /// #[derive(Debug, Command)]
 /// #[name = "greet"]
@@ -139,6 +149,16 @@ pub struct InvocationError;
 ///     /// The user to greet
 ///     user: UserInput,
 /// }
+/// # #[async_trait]
+/// # impl ApplicationCommandInteractionHandler for HelloCommand {
+/// #    async fn invoke(
+/// #        &self,
+/// #        ctx: &Context,
+/// #        command: &ApplicationCommandInteraction,
+/// #    ) -> Result<(), InvocationError> {
+/// #        unimplemented!()
+/// #    }
+/// # }
 /// ```
 /// To derive the trait, you must provide the following (see the example above):
 /// - Docstrings for the struct and all fields (these will be used for the descriptions of the command and its options)
@@ -167,23 +187,48 @@ pub trait Command: ApplicationCommandInteractionHandler + Sized {
 /// This trait provides the functions necessary to parse and register a subcommand for a slash command.
 ///
 /// For most use cases:
-/// 1. Create the subcommand in the same way you would create a [`Command`], but derive the [`SubCommand`] trait instead
-/// (Remember to implement [`ApplicationCommandInteractionHandler`])
-///
 /// ```
+/// # use serenity::async_trait;
+/// # use serenity::prelude::*;
+/// # use serenity::model::interactions::*;
+/// # use serenity::model::prelude::application_command::*;
+/// # use slashies::*;
+/// # use slashies_macros::*;
+/// # use slashies::parsable::*;
+/// // 1. Create the subcommand in the same way you would create a Command, but derive the SubCommand trait instead
+/// // (Remember to implement ApplicationCommandInteractionHandler)
+///
 /// #[derive(Debug, SubCommand)]
 /// struct TestSubCommandOne {
 ///     /// A number
 ///     number: f64,
 /// }
+/// # #[async_trait]
+/// # impl ApplicationCommandInteractionHandler for TestSubCommandOne {
+/// #     async fn invoke(
+/// #         &self,
+/// #         ctx: &Context,
+/// #         command: &ApplicationCommandInteraction,
+/// #     ) -> Result<(), InvocationError> {
+/// #         unimplemented!()
+/// #     }
+/// # }
 ///
 /// #[derive(Debug, SubCommand)]
 /// struct TestSubCommandTwo;
-/// ```
+/// # #[async_trait]
+/// # impl ApplicationCommandInteractionHandler for TestSubCommandTwo {
+/// #     async fn invoke(
+/// #         &self,
+/// #         ctx: &Context,
+/// #         command: &ApplicationCommandInteraction,
+/// #     ) -> Result<(), InvocationError> {
+/// #         unimplemented!()
+/// #     }
+/// # }
 ///
-/// 2. Create an enum with a variant for each subcommand and derive the [`Command`] and [`ApplicationCommandInteractionHandler`] traits via the macros crate:
+/// // 2. Create an enum with a variant for each subcommand and derive the Command and ApplicationCommandInteractionHandler traits via the macros crate:
 ///
-/// ```
 /// /// A test command to show subcommands
 /// #[derive(Debug, Command, ApplicationCommandInteractionHandler)]
 /// #[name = "test"]
@@ -211,11 +256,55 @@ pub trait SubCommand: Sized {
 /// This trait provides the functions necessary to parse and register a subcommand group for a slash command.
 ///
 /// For most use cases:
-/// 1. Create the "leaf" subcommands as normal (see [`SubCommand`] docs)
-/// 2. Create an enum with a variant for each subcommand in the subcommand group and derive the [`SubCommandGroup`] and
-/// [`ApplicationCommandInteractionHandler`] traits via the macros crate:
-///
 /// ```
+/// # use serenity::async_trait;
+/// # use serenity::prelude::*;
+/// # use serenity::model::interactions::*;
+/// # use serenity::model::prelude::application_command::*;
+/// # use slashies::*;
+/// # use slashies_macros::*;
+/// # use slashies::parsable::*;
+/// #
+/// // 1. Create the "leaf" subcommands as normal (see SubCommand docs)
+/// # #[derive(Debug, SubCommand)]
+/// # struct TestSubCommandOne;
+/// # #[async_trait]
+/// # impl ApplicationCommandInteractionHandler for TestSubCommandOne {
+/// #     async fn invoke(
+/// #         &self,
+/// #         ctx: &Context,
+/// #         command: &ApplicationCommandInteraction,
+/// #     ) -> Result<(), InvocationError> {
+/// #         unimplemented!()
+/// #     }
+/// # }
+/// # #[derive(Debug, SubCommand)]
+/// # struct TestSubCommandTwo;
+/// # #[async_trait]
+/// # impl ApplicationCommandInteractionHandler for TestSubCommandTwo {
+/// #     async fn invoke(
+/// #         &self,
+/// #         ctx: &Context,
+/// #         command: &ApplicationCommandInteraction,
+/// #     ) -> Result<(), InvocationError> {
+/// #         unimplemented!()
+/// #     }
+/// # }
+/// # #[derive(Debug, SubCommand)]
+/// # struct TestSubCommandThree;
+/// # #[async_trait]
+/// # impl ApplicationCommandInteractionHandler for TestSubCommandThree {
+/// #     async fn invoke(
+/// #         &self,
+/// #         ctx: &Context,
+/// #         command: &ApplicationCommandInteraction,
+/// #     ) -> Result<(), InvocationError> {
+/// #         unimplemented!()
+/// #     }
+/// # }
+/// // 2. Create an enum with a variant for each subcommand in the subcommand group and derive the SubCommandGroup and
+/// // ApplicationCommandInteractionHandler traits via the macros crate:
+///
 /// /// A test command to show subcommands
 /// #[derive(Debug, SubCommandGroup, ApplicationCommandInteractionHandler)]
 /// #[name = "test sub command group"]
@@ -228,12 +317,10 @@ pub trait SubCommand: Sized {
 ///     #[name = "two"]
 ///     Two(TestSubCommandTwo),
 /// }
-/// ```
 ///
-/// 3. Create an enum with a variant for each subcommand / subcommand group and derive the [`Command`] and
-/// [`ApplicationCommandInteractionHandler`] traits via the macros crate:
+/// // 3. Create an enum with a variant for each subcommand / subcommand group and derive the [`Command`] and
+/// // [`ApplicationCommandInteractionHandler`] traits via the macros crate:
 ///
-/// ```
 /// /// A test command to show subcommands
 /// #[derive(Debug, Command, ApplicationCommandInteractionHandler)]
 /// #[name = "test"]
@@ -258,11 +345,21 @@ pub trait SubCommandGroup: Sized {
     ) -> &mut CreateApplicationCommandOption;
 }
 
-/// This trait provides function to receive and respond to slash command interactions.
+/// This trait provides a function to receive and respond to slash command interactions.
 ///
 /// Typically you will want to respond using [`create_interaction_response`] - see the [`serenity`] docs for more info.
 ///
 /// ```
+/// # use serenity::async_trait;
+/// # use serenity::prelude::*;
+/// # use serenity::model::interactions::*;
+/// # use serenity::model::prelude::application_command::*;
+/// # use slashies::*;
+/// # use slashies::parsable::*;
+/// # struct HelloCommand {
+/// #     user: UserInput,
+/// # }
+///
 /// #[async_trait]
 /// impl ApplicationCommandInteractionHandler for HelloCommand {
 ///     async fn invoke(
@@ -270,11 +367,11 @@ pub trait SubCommandGroup: Sized {
 ///         ctx: &Context,
 ///         command: &ApplicationCommandInteraction,
 ///     ) -> Result<(), InvocationError> {
-///         let nickname = self.user.1.as_ref().map(|pm| pm.nick.as_ref()).flatten();
+///         let nickname = self.user.member.as_ref().map(|pm| pm.nick.as_ref()).flatten();
 ///         let greeting = if let Some(nick) = nickname {
-///             format!("Hello {} aka {}", self.user.0.name, nick)
+///             format!("Hello {} aka {}", self.user.user.name, nick)
 ///         } else {
-///             format!("Hello {}", self.user.0.name)
+///             format!("Hello {}", self.user.user.name)
 ///         };
 ///         command
 ///             .create_interaction_response(&ctx.http, |response| {
@@ -318,6 +415,24 @@ pub trait MessageComponentInteractionHandler {
 /// - Delegate the invocation of a command to the specific enum variant
 ///
 /// ```
+/// # use slashies::*;
+/// # use slashies_macros::*;
+/// # use serenity::prelude::*;
+/// # use serenity::model::prelude::application_command::*;
+/// # #[derive(Debug, Command)]
+/// # #[name = "greet"]
+/// # /// Greet a user
+/// # struct HelloCommand;
+/// # #[serenity::async_trait]
+/// # impl ApplicationCommandInteractionHandler for HelloCommand {
+/// #     async fn invoke(
+/// #         &self,
+/// #         ctx: &Context,
+/// #         command: &ApplicationCommandInteraction,
+/// #     ) -> Result<(), InvocationError> {
+/// #     unimplemented!()
+/// #     }
+/// # }
 /// #[derive(Debug, Commands)]
 /// enum BotCommands {
 ///     Hello(HelloCommand),
@@ -342,21 +457,73 @@ pub trait Commands: Sized {
 /// registered globally and others registered only in specific guilds.
 ///
 /// Examples:
-/// ```
+/// ```no_run
+/// # use slashies::*;
+/// # use slashies_macros::*;
+/// # use serenity::async_trait;
+/// # use serenity::prelude::*;
+/// # use serenity::model::prelude::*;
+/// # use serenity::model::prelude::application_command::*;
+/// # /// Greet a user
+/// # #[derive(Debug, Command)]
+/// # #[name = "greet"]
+/// # struct HelloCommand;
+/// # #[async_trait]
+/// # impl ApplicationCommandInteractionHandler for HelloCommand {
+/// #    async fn invoke(
+/// #        &self,
+/// #        ctx: &Context,
+/// #        command: &ApplicationCommandInteraction,
+/// #    ) -> Result<(), InvocationError> {
+/// #     unimplemented!()
+/// #     }
+/// # }
+/// # /// Another command
+/// # #[derive(Debug, Command)]
+/// # #[name = "next"]
+/// # struct NextCommand;
+/// # #[async_trait]
+/// # impl ApplicationCommandInteractionHandler for NextCommand {
+/// #    async fn invoke(
+/// #        &self,
+/// #        ctx: &Context,
+/// #        command: &ApplicationCommandInteraction,
+/// #    ) -> Result<(), InvocationError> {
+/// #     unimplemented!()
+/// #     }
+/// # }
+/// # /// Another command
+/// # #[derive(Debug, Command)]
+/// # #[name = "other"]
+/// # struct OtherCommand;
+/// # #[async_trait]
+/// # impl ApplicationCommandInteractionHandler for OtherCommand {
+/// #    async fn invoke(
+/// #        &self,
+/// #        ctx: &Context,
+/// #        command: &ApplicationCommandInteraction,
+/// #    ) -> Result<(), InvocationError> {
+/// #         unimplemented!()
+/// #     }
+/// # }
+/// # async fn test(ctx: Context) {
+/// let guild_id = Some(GuildId(0));
+///
 /// // Register a command to a guild
-/// register_commands!(&ctx, guild_id, [HelloCommand])
+/// register_commands!(&ctx, guild_id, [HelloCommand]);
 ///
 /// // Register multiple commands
-/// register_commands!(&ctx, guild_id, [HelloCommand, NextCommand, OtherCommand])
+/// register_commands!(&ctx, guild_id, [HelloCommand, NextCommand, OtherCommand]);
 ///
 /// // Register a global command
-/// register_commands!(&ctx, None, [HelloCommand])
+/// register_commands!(&ctx, None, [HelloCommand]);
+/// # }
 /// ```
 #[macro_export]
 macro_rules! register_commands {
     ($ctx:expr, $guild_id:expr, [$($cmdType:ty),+]) => {{
         if let Some(guild_id) = $guild_id {
-            GuildId::set_application_commands(&guild_id, &$ctx.http, |commands_builder| {
+            serenity::model::prelude::GuildId::set_application_commands(&guild_id, &$ctx.http, |commands_builder| {
                 commands_builder
                 $(
                     .create_application_command(|command| <$cmdType as slashies::Command>::register(command))

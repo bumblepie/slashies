@@ -13,6 +13,7 @@ use crate::ParseError;
 /// This trait contains the functions needed to parse/register a command option
 ///
 /// For an non-required command option, use [`Option<T>`] to make it optional
+///
 /// The following types are implemented out of the box:
 ///
 /// | Discord type | Rust type          |
@@ -20,7 +21,7 @@ use crate::ParseError;
 /// | STRING       | [`String`]         |
 /// | INTEGER      | [`i64`]            |
 /// | BOOLEAN      | [`bool`]           |
-/// | USER         | ([`User`], [`Option<PartialMember>`])|
+/// | USER         | [`UserInput`]      |
 /// | CHANNEL      | [`PartialChannel`] |
 /// | ROLE         | [`Mentionable`]    |
 /// | NUMBER       | [`f64`]            |
