@@ -1,3 +1,4 @@
+#![warn(missing_docs)]
 use serenity::{
     async_trait,
     builder::{CreateApplicationCommand, CreateApplicationCommandOption},
