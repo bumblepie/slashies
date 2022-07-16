@@ -9,12 +9,34 @@ use serenity::model::{
 };
 
 use crate::ParseError;
+
+/// This trait contains the functions needed to parse/register a command option
+///
+/// For an non-required command option, use [`Option<T>`] to make it optional
+/// The following types are implemented out of the box:
+///
+/// | Discord type | Rust type          |
+/// |--------------|--------------------|
+/// | STRING       | [`String`]         |
+/// | INTEGER      | [`i64`]            |
+/// | BOOLEAN      | [`bool`]           |
+/// | USER         | ([`User`], [`Option<PartialMember>`])|
+/// | CHANNEL      | [`PartialChannel`] |
+/// | ROLE         | [`Mentionable`]    |
+/// | NUMBER       | [`f64`]            |
+/// | ATTACHMENT   | N/A                |
 pub trait ParsableCommandOption: Sized {
+    /// Try to parse this from a command argument provided by an interaction.
+    /// The argument might not have been provided, hence the optional input - if this is a non-optional type we would normally
+    /// return a [`ParseError::MissingOption`] in this case.
     fn parse_from(
         option: Option<&ApplicationCommandInteractionDataOption>,
     ) -> Result<Self, ParseError>;
 
+    /// The Discord type that this rust type maps to - this will determine how the user fills in the option when using the command in Discord
     fn application_command_option_type() -> ApplicationCommandOptionType;
+
+    /// Whether the option is non-optional. Defaults to `true`.
     fn is_required() -> bool {
         true
     }
@@ -140,9 +162,13 @@ impl ParsableCommandOption for Role {
     }
 }
 
+/// An input for the MENTIONABLE Discord type
+/// Will either be a role or a user
 #[derive(Debug, Clone)]
 pub enum Mentionable {
+    /// A role
     Role(Role),
+    /// A user
     User(User, Option<PartialMember>),
 }
 
