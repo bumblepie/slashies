@@ -28,13 +28,14 @@ use crate::ParseError;
 /// | ATTACHMENT   | N/A                |
 pub trait ParsableCommandOption: Sized {
     /// Try to parse this from a command argument provided by an interaction.
-    /// The argument might not have been provided, hence the optional input - if this is a non-optional type we would normally
-    /// return a [`ParseError::MissingOption`] in this case.
+    /// The argument might not have been provided, hence the optional input - if this is a
+    /// non-optional type we would normally return a [`ParseError::MissingOption`] in this case.
     fn parse_from(
         option: Option<&ApplicationCommandInteractionDataOption>,
     ) -> Result<Self, ParseError>;
 
-    /// The Discord type that this rust type maps to - this will determine how the user fills in the option when using the command in Discord
+    /// The Discord type that this rust type maps to - this will determine how the user fills in the
+    /// option when using the command in Discord
     fn application_command_option_type() -> ApplicationCommandOptionType;
 
     /// Whether the option is non-optional. Defaults to `true`.
