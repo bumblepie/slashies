@@ -997,7 +997,7 @@ checksum = "eb703cfe953bccee95685111adeedb76fabe4e97549a58d16f03ea7b9367bb32"
 
 [[package]]
 name = "slashies"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "serenity",
  "slashies-macros",
@@ -1006,7 +1006,7 @@ dependencies = [
 
 [[package]]
 name = "slashies-macros"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "itertools",
  "proc-macro-error",

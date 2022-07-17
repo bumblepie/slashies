@@ -1,7 +1,7 @@
 [package]
 name = "slashies"
 description = "Slashies helps to reduce the boiler plate code needed to create slash commands for a Discord bot."
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 repository = "https://github.com/bumblepie/slashies"
 license = "MIT"
