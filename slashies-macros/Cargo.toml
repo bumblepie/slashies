@@ -3,6 +3,7 @@ name = "slashies-macros"
 description = "Provides the derive macros for the slashies crate"
 version = "0.1.0"
 edition = "2021"
+repository = "https://github.com/bumblepie/slashies"
 license = "MIT"
 keywords = ["discord"]
 
