@@ -9,14 +9,7 @@ Make sure to read the [Discord documentation](https://discord.com/developers/doc
 on slash commands to understand the general concepts like interactions.
 
 With Slashies, you can create a slash command in four easy steps:
-```
-# use slashies::*;
-# use slashies::parsable::*;
-# use slashies_macros::*;
-# use serenity::async_trait;
-# use serenity::prelude::*;
-# use serenity::model::prelude::*;
-# use serenity::model::prelude::application_command::*;
+```rust
 // 1. Create a struct representing the arguments for the command and derive/implement the
 // Command trait
 
