@@ -4,6 +4,7 @@ description = "Provides the derive macros for the slashies crate"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
+keywords = ["discord"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]

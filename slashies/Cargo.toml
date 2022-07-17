@@ -5,6 +5,7 @@ version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/bumblepie/slashies"
 license = "MIT"
+keywords = ["discord"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
