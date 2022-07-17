@@ -352,7 +352,7 @@ pub trait SubCommand: Sized {
 ///
 ///     /// A regular subcommand
 ///     #[name = "three"]
-///     Two(TestSubCommandThree),
+///     Three(TestSubCommandThree),
 /// }
 /// ```
 /// Note that you can mix subcommands and subcommand groups in a command as in the example above.
