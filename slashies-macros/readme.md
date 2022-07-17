@@ -1,0 +1,1 @@
+Provides the derive macros for [slashies](https://crates.io/crates/slashies)
