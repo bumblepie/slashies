@@ -1,1 +1,2 @@
-An example showing a more complex command making use of many different types. You can also use custom types if needed by implementing the `ParsableCommandOption` trait.
+# MadlibsBot
+This example shows a more complex command making use of many different types. You can also use custom types if needed by implementing the `ParsableCommandOption` trait. The bot simply takes a bunch of different arguments and uses them to tell a silly story.
